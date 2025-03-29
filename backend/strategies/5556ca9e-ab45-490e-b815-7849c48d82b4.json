@@ -1,0 +1,24 @@
+{
+  "name": "test",
+  "type": "buy",
+  "symbol": "RELIANCE",
+  "timeframe": "day",
+  "entry_conditions": [
+    {
+      "indicator": "WMA",
+      "comparison": ">=",
+      "params": {
+        "value": "close",
+        "timeperiod": 63
+      },
+      "variable": "wma",
+      "threshold": 1250
+    }
+  ],
+  "exit_conditions": [],
+  "stop_loss": 30,
+  "target_profit": 50,
+  "strategy_id": "5556ca9e-ab45-490e-b815-7849c48d82b4",
+  "created_at": "2025-03-28T12:29:18.502103",
+  "updated_at": "2025-03-28T12:29:18.502114"
+}

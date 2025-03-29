@@ -1,0 +1,23 @@
+{
+  "optimization_id": "3faa3dbe-0d86-45b1-bdc7-aa170b059d5a",
+  "status": "running",
+  "summary": {
+    "returns": -0.019221949951170245,
+    "win_rate": 0.3333333333333333,
+    "max_drawdown": 0.1478903172357173,
+    "sharpe_ratio": -0.22304606484689704,
+    "trade_count": 3
+  },
+  "comparison": {
+    "original": {
+      "returns": -0.019221949951170245,
+      "win_rate": 0.3333333333333333,
+      "max_drawdown": 0.1478903172357173,
+      "sharpe_ratio": -0.22304606484689704,
+      "trade_count": 3
+    },
+    "optimized": null
+  },
+  "strategy_id": "1dfcde24-7c2f-4941-a94c-fea04c3e14c7",
+  "created_at": "2025-03-29T01:26:37.895980"
+}

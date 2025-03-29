@@ -1,0 +1,142 @@
+{
+  "SMA": {
+    "display_name": "Simple Moving Average (SMA)",
+    "description": "Average price over a specified period",
+    "category": "Overlap Studies"
+  },
+  "EMA": {
+    "display_name": "Exponential Moving Average (EMA)",
+    "description": "Weighted moving average giving more importance to recent prices",
+    "category": "Overlap Studies"
+  },
+  "WMA": {
+    "display_name": "Weighted Moving Average (WMA)",
+    "description": "Moving average with linearly increasing weights for newer data",
+    "category": "Overlap Studies"
+  },
+  "DEMA": {
+    "display_name": "Double Exponential Moving Average (DEMA)",
+    "description": "Moving average designed to reduce lag of traditional EMAs",
+    "category": "Overlap Studies"
+  },
+  "TEMA": {
+    "display_name": "Triple Exponential Moving Average (TEMA)",
+    "description": "Moving average with reduced lag over traditional EMAs",
+    "category": "Overlap Studies"
+  },
+  "TRIMA": {
+    "display_name": "Triangular Moving Average (TRIMA)",
+    "description": "Weighted moving average giving more weight to middle portion of the period",
+    "category": "Overlap Studies"
+  },
+  "KAMA": {
+    "display_name": "Kaufman Adaptive Moving Average (KAMA)",
+    "description": "Adapts to price volatility, moves faster in trending markets and slower in ranging markets",
+    "category": "Overlap Studies"
+  },
+  "MAMA": {
+    "display_name": "MESA Adaptive Moving Average (MAMA)",
+    "description": "Adapts to price action based on rate of change of phase",
+    "category": "Overlap Studies"
+  },
+  "BBANDS": {
+    "display_name": "Bollinger Bands (BB)",
+    "description": "Volatility bands placed above and below a moving average",
+    "category": "Overlap Studies"
+  },
+  "SAR": {
+    "display_name": "Parabolic SAR",
+    "description": "Stop and Reverse indicator used to determine trend direction and reversals",
+    "category": "Overlap Studies"
+  },
+  "RSI": {
+    "display_name": "Relative Strength Index (RSI)",
+    "description": "Momentum oscillator measuring speed and change of price movements (0-100)",
+    "category": "Momentum Indicators"
+  },
+  "MACD": {
+    "display_name": "Moving Average Convergence Divergence (MACD)",
+    "description": "Trend-following momentum indicator showing relationship between two moving averages",
+    "category": "Momentum Indicators"
+  },
+  "STOCH": {
+    "display_name": "Stochastic Oscillator",
+    "description": "Compares closing price to price range over a period (0-100)",
+    "category": "Momentum Indicators"
+  },
+  "STOCHF": {
+    "display_name": "Fast Stochastic Oscillator",
+    "description": "Faster version of stochastic oscillator (0-100)",
+    "category": "Momentum Indicators"
+  },
+  "STOCHRSI": {
+    "display_name": "Stochastic RSI",
+    "description": "Applies stochastic calculation to RSI values (0-100)",
+    "category": "Momentum Indicators"
+  },
+  "ADX": {
+    "display_name": "Average Directional Index (ADX)",
+    "description": "Measures strength of a trend regardless of direction (0-100)",
+    "category": "Momentum Indicators"
+  },
+  "ADXR": {
+    "display_name": "Average Directional Movement Index Rating (ADXR)",
+    "description": "Smoothed version of ADX that measures trend strength (0-100)",
+    "category": "Momentum Indicators"
+  },
+  "CCI": {
+    "display_name": "Commodity Channel Index (CCI)",
+    "description": "Measures current price level relative to average price level over time",
+    "category": "Momentum Indicators"
+  },
+  "MOM": {
+    "display_name": "Momentum",
+    "description": "Rate of change in price over a specified period",
+    "category": "Momentum Indicators"
+  },
+  "ROC": {
+    "display_name": "Rate of Change (ROC)",
+    "description": "Percentage change in price over a specified period",
+    "category": "Momentum Indicators"
+  },
+  "OBV": {
+    "display_name": "On Balance Volume (OBV)",
+    "description": "Cumulative total of volume based on price direction",
+    "category": "Volume Indicators"
+  },
+  "AD": {
+    "display_name": "Chaikin A/D Line",
+    "description": "Volume-based indicator designed to measure cumulative flow of money into and out of a security",
+    "category": "Volume Indicators"
+  },
+  "ADOSC": {
+    "display_name": "Chaikin A/D Oscillator",
+    "description": "Measures momentum of the Accumulation/Distribution Line",
+    "category": "Volume Indicators"
+  },
+  "ATR": {
+    "display_name": "Average True Range (ATR)",
+    "description": "Measures market volatility by decomposing the entire range of price movement",
+    "category": "Volatility Indicators"
+  },
+  "NATR": {
+    "display_name": "Normalized Average True Range (NATR)",
+    "description": "ATR normalized against closing price, expressed as a percentage",
+    "category": "Volatility Indicators"
+  },
+  "CDLENGULFING": {
+    "display_name": "Engulfing Pattern",
+    "description": "Reversal pattern where a candle completely engulfs the prior candle",
+    "category": "Pattern Recognition"
+  },
+  "CDLDOJI": {
+    "display_name": "Doji Pattern",
+    "description": "Indicates indecision where open and close are nearly equal",
+    "category": "Pattern Recognition"
+  },
+  "CDLHAMMER": {
+    "display_name": "Hammer Pattern",
+    "description": "Bullish reversal pattern with small body and long lower shadow",
+    "category": "Pattern Recognition"
+  }
+}

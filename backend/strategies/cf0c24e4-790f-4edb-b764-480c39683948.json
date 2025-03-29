@@ -1,0 +1,24 @@
+{
+  "name": "test",
+  "type": "buy",
+  "symbol": "RELIANCE",
+  "timeframe": "day",
+  "entry_conditions": [
+    {
+      "indicator": "SMA",
+      "comparison": ">=",
+      "params": {
+        "value": "close",
+        "timeperiod": 63
+      },
+      "variable": "sma",
+      "threshold": 1220
+    }
+  ],
+  "exit_conditions": [],
+  "stop_loss": 5,
+  "target_profit": 10,
+  "strategy_id": "cf0c24e4-790f-4edb-b764-480c39683948",
+  "created_at": "2025-03-28T11:28:51.654532",
+  "updated_at": "2025-03-28T11:28:51.654540"
+}

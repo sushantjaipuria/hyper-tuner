@@ -1,0 +1,23 @@
+{
+  "name": "test1",
+  "type": "buy",
+  "symbol": "RELIANCE",
+  "timeframe": "day",
+  "entry_conditions": [
+    {
+      "indicator": "EMA",
+      "comparison": ">=",
+      "params": {
+        "value": 26,
+        "timeperiod": 21
+      },
+      "variable": "ema"
+    }
+  ],
+  "exit_conditions": [],
+  "stop_loss": 5,
+  "target_profit": 18,
+  "strategy_id": "36a11952-cc3f-4e4b-92f5-817f4e1f361d",
+  "created_at": "2025-03-27T23:32:19.311516",
+  "updated_at": "2025-03-27T23:32:19.311533"
+}
