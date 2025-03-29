@@ -20,7 +20,10 @@ logger = logging.getLogger(__name__)
 
 # Initialize Flask app
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})  # Enable CORS for all routes
+
+# Configure CORS to accept requests from both localhost and GitHub Codespaces domains
+CORS(app, resources={r"/*": {"origins": ["http://localhost:3000", "https://*.github.dev", "https://*.app.github.dev", "*"]}})
+# The wildcard is kept for backward compatibility, but explicit domains are better
 
 # Initialize components
 strategy_manager = StrategyManager()
@@ -56,7 +59,35 @@ def save_strategy():
 @app.route('/api/test', methods=['GET'])
 def test_connection():
     """Simple test endpoint to verify connectivity"""
-    return jsonify({"success": True, "message": "Backend API is reachable"})
+    # Include useful diagnostics
+    try:
+        # Get request headers for diagnostics
+        headers = dict(request.headers)
+        # Remove sensitive headers
+        if 'Cookie' in headers:
+            headers['Cookie'] = '[REDACTED]'
+        if 'Authorization' in headers:
+            headers['Authorization'] = '[REDACTED]'
+            
+        # Return detailed connectivity information
+        return jsonify({
+            "success": True, 
+            "message": "Backend API is reachable",
+            "backend_info": {
+                "data_provider": provider_factory.get_provider_name(),
+                "timestamp": datetime.now().isoformat(),
+                "talib_version": indicators.talib_version if hasattr(indicators, 'talib_version') else 'Unknown'
+            },
+            "request_info": {
+                "remote_addr": request.remote_addr,
+                "host": request.host,
+                "origin": request.headers.get('Origin', 'Unknown'),
+                "referrer": request.headers.get('Referer', 'Unknown')
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error in test endpoint: {str(e)}")
+        return jsonify({"success": True, "message": "Backend API is reachable but encountered an error gathering diagnostics", "error": str(e)})
 
 
 @app.route('/api/get-strategy/<strategy_id>', methods=['GET'])

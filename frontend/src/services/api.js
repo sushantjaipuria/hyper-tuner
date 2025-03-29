@@ -1,8 +1,62 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3001/api'; // Ensure this matches the port in backend's app.py
+// Determine the appropriate API URL based on the environment
+const determineApiUrl = () => {
+  // Check for manual override in localStorage
+  const overrideUrl = localStorage.getItem('api_url_override');
+  if (overrideUrl) {
+    console.log('Using API URL override from localStorage:', overrideUrl);
+    return overrideUrl;
+  }
+  
+  // Check if we're in GitHub Codespaces
+  const isCodespaces = window.location.hostname.includes('.github.dev') || 
+                       window.location.hostname.includes('.preview.app.github.dev');
+  
+  if (isCodespaces) {
+    // For Codespaces: Use the same domain but with the backend port
+    // GitHub Codespaces URLs follow the pattern: something-port.preview.app.github.dev
+    // We need to replace the port number in this pattern
+    const currentHostname = window.location.hostname;
+    
+    // Extract port from current hostname or default to 3000
+    const portMatch = currentHostname.match(/-([0-9]+)\./); 
+    const currentPort = portMatch ? portMatch[1] : '3000';
+    
+    // Create backend URL by replacing the port (e.g., 3000 → 3001)
+    const backendHostname = currentHostname.replace(
+      `-${currentPort}.`, 
+      `-3001.`
+    );
+    
+    console.log(`Running in Codespaces. Backend hostname: ${backendHostname}`);
+    return `${window.location.protocol}//${backendHostname}/api`;
+  }
+  
+  // For local development, use localhost
+  return 'http://localhost:3001/api';
+};
+
+// Helper function to set a manual override for the API URL
+// Can be used from the browser console like: setApiUrlOverride('https://your-backend-url/api')
+window.setApiUrlOverride = (url) => {
+  if (url) {
+    localStorage.setItem('api_url_override', url);
+    console.log(`API URL override set to: ${url}. Refresh the page to apply.`);
+  } else {
+    localStorage.removeItem('api_url_override');
+    console.log('API URL override removed. Refresh the page to apply.');
+  }
+};
+
+// Set the API URL dynamically
+const API_URL = determineApiUrl();
+console.log('Using API URL:', API_URL);
 
 const api = {
+  // Utility method to get the API URL (for logging/debugging)
+  getApiUrl: () => API_URL,
+  
   // Test API connectivity
   testConnection: async () => {
     try {

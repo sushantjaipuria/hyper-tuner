@@ -56,6 +56,12 @@ const StrategyCreation = ({ strategy, onSave, loading }) => {
       setIsLoadingIndicators(true);
       setIndicatorError('');
       
+      // Environment diagnostic information
+      console.log('Current environment information:');
+      console.log('- Hostname:', window.location.hostname);
+      console.log('- Protocol:', window.location.protocol);
+      console.log('- Port:', window.location.port || '(default)');
+      
       // First test API connectivity
       console.log('Testing API connectivity...');
       const testResult = await api.testConnection();
@@ -66,6 +72,7 @@ const StrategyCreation = ({ strategy, onSave, loading }) => {
       }
       
       console.log('Fetching indicators from API...');
+      console.log('API endpoint:', api.getApiUrl() + '/get-available-indicators');
       const response = await api.getAvailableIndicators();
       console.log('Indicators response:', response);
       
