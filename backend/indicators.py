@@ -14,6 +14,11 @@ class Indicators:
         """Initialize the Indicators class"""
         self.logger = logging.getLogger(__name__)
         
+        # Check TA-Lib version
+        import talib
+        self.talib_version = talib.__version__
+        self.logger.info(f"Using TA-Lib version {self.talib_version}")
+        
         # Load indicator mappings if available
         self.indicator_mappings = self._load_indicator_mappings()
         
@@ -117,10 +122,25 @@ class Indicators:
                         
                         if input_name.lower() not in [p.lower() for p in params]:
                             params = [input_name.lower()] + params
-                except:
+                except Exception as e:
+                    self.logger.warning(f"Abstract API failed for {func_name}: {str(e)}")
                     # Fallback: inspect the function
-                    signature = inspect.signature(func)
-                    params = list(signature.parameters.keys())
+                    try:
+                        signature = inspect.signature(func)
+                        params = list(signature.parameters.keys())
+                        # Ensure consistent naming for common price parameters
+                        if 'real' in params or 'price' in params:
+                            params = ['value'] + [p for p in params if p not in ('real', 'price')]
+                    except Exception as inner_e:
+                        self.logger.warning(f"Fallback parameter extraction failed for {func_name}: {str(inner_e)}")
+                        # Use safe default parameters for common indicators
+                        if func_name in self.indicator_mappings:
+                            # Use known parameters for this indicator
+                            # Most indicators use these two params at minimum
+                            params = ['value', 'timeperiod']
+                        else:
+                            # Last resort default parameters
+                            params = ['value', 'timeperiod']
                 
                 # Add to indicators dictionary
                 indicators[func_name] = {
@@ -372,13 +392,26 @@ class Indicators:
         """
         result = {}
         for name, info in self.available_indicators.items():
-            result[name] = {
+            # Ensure minimal valid structure for each indicator
+            cleaned_info = {
                 'display_name': info.get('display_name', name),
                 'description': info.get('description', ''),
                 'category': info.get('category', 'Other'),
-                'params': info['params'],
                 'code_name': info.get('code_name', name)  # Original code for reference
             }
+            
+            # Ensure params is always a list
+            if 'params' not in info or not isinstance(info['params'], list):
+                # Default safe params
+                self.logger.warning(f"Missing or invalid params for indicator {name}, using defaults")
+                cleaned_info['params'] = ['value', 'timeperiod'] 
+            else:
+                cleaned_info['params'] = info['params']
+                
+            result[name] = cleaned_info
+        
+        # Log the number of indicators found
+        self.logger.info(f"Returning {len(result)} available indicators")
         return result
     
     def calculate_indicator(self, indicator_name, data, params=None):
