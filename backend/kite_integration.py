@@ -47,6 +47,9 @@ class KiteIntegration(DataProvider):
                         self.api_key = config['kite']['api_key']
                         self.api_secret = config['kite']['api_secret']
                         self.logger.info("Loaded Kite API credentials from config file")
+                        # Add a log entry to verify the key (show first few chars only)
+                        if self.api_key and len(self.api_key) > 4:
+                            self.logger.info(f"API key found with prefix: {self.api_key[:4]}...")
                         return
                     else:
                         self.logger.warning("Config file exists but missing kite credentials")
@@ -331,8 +334,25 @@ class KiteIntegration(DataProvider):
             raise
 
     def is_using_placeholders(self):
-        """Check if using placeholder credentials"""
-        return self.api_key == "your_api_key" or self.api_secret == "your_api_secret"
+        """
+        Check if using placeholder or invalid credentials.
+        Returns True if credentials are missing, empty, or placeholder values.
+        """
+        # Check if API key is missing, empty, or the placeholder
+        invalid_key = (self.api_key is None or 
+                       self.api_key == "" or 
+                       self.api_key == "your_api_key")
+        
+        # Check if API secret is missing, empty, or the placeholder
+        invalid_secret = (self.api_secret is None or 
+                          self.api_secret == "" or 
+                          self.api_secret == "your_api_secret")
+        
+        # Log for debugging purposes (optional but helpful)
+        if invalid_key or invalid_secret:
+            self.logger.debug("Using placeholder credentials or credentials are invalid")
+        
+        return invalid_key or invalid_secret
 
 # Example usage:
 if __name__ == "__main__":
