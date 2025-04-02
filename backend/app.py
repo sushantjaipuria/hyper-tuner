@@ -6,7 +6,10 @@ import numpy as np
 import csv
 import io
 from datetime import datetime
-from config import load_kite_config, save_kite_config, update_kite_access_token
+from config import (
+    load_kite_config, save_kite_config, update_kite_access_token,
+    get_available_kite_users, DEFAULT_KITE_USER
+)
 
 # Import custom modules
 from strategy_manager import StrategyManager
@@ -14,6 +17,7 @@ from backtest_engine import BacktestEngine
 from optimizer import Optimizer
 from data_provider_factory import provider_factory
 from indicators import Indicators
+from kite_integration import KiteIntegration
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -38,19 +42,29 @@ indicators = Indicators()
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
+    provider_info = provider_factory.get_provider_info()
+    display_name = provider_info.get("display_name", provider_info.get("name", "unknown"))
+    
     return jsonify({
         "status": "healthy", 
         "timestamp": datetime.now().isoformat(),
-        "data_provider": provider_factory.get_provider_name()
+        "data_provider": provider_info.get("name"),
+        "provider_display_name": display_name,
+        "provider_user_id": provider_info.get("user_id")
     })
 
 
 @app.route('/api/data-provider', methods=['GET'])
 def get_data_provider():
     """Get the current data provider information"""
+    provider_info = provider_factory.get_provider_info()
+    display_name = provider_info.get("display_name", provider_info.get("name", "unknown"))
+    
     return jsonify({
         "success": True,
-        "provider": provider_factory.get_provider_name(),
+        "provider": provider_info.get("name"),
+        "display_name": display_name,
+        "user_id": provider_info.get("user_id"),
         "timestamp": datetime.now().isoformat()
     })
 
@@ -61,28 +75,43 @@ def set_data_provider():
     try:
         data = request.json
         provider_name = data.get('provider')
+        user_id = data.get('user_id')  # Add support for user_id parameter
         
         if not provider_name:
             logger.error("Missing provider name in request")
             return jsonify({"success": False, "error": "Missing provider name"}), 400
         
-        logger.info(f"Setting data provider to: {provider_name}")
+        # Log the provider selection with user if applicable
+        if user_id and provider_name.lower() == 'kite':
+            logger.info(f"Setting data provider to: {provider_name} for user: {user_id}")
+        else:
+            logger.info(f"Setting data provider to: {provider_name}")
         
-        # Force the specified provider
-        data_provider = provider_factory.get_provider(force_provider=provider_name)
+        # Force the specified provider with user ID if applicable
+        data_provider = provider_factory.get_provider(force_provider=provider_name, user_id=user_id)
         
         # For Kite provider, check if authentication is required
         requires_auth = False
-        if provider_name.lower() == 'kite':
-            logger.info("Checking if Kite authentication is required")
+        if provider_name.lower() == 'kite' or provider_name.lower().startswith('kite-'):
+            current_user = user_id
+            if not current_user and provider_name.lower().startswith('kite-'):
+                # Extract user from provider name
+                current_user = provider_name.lower().split('-', 1)[1]
+                
+            logger.info(f"Checking if Kite authentication is required for user: {current_user or DEFAULT_KITE_USER}")
             token_valid = data_provider.verify_token()
             requires_auth = not token_valid
             logger.info(f"Kite token valid: {token_valid}, requires auth: {requires_auth}")
         
+        # Get detailed provider info
+        provider_info = provider_factory.get_provider_info()
+        
         # Return the provider info
         return jsonify({
             "success": True,
-            "provider": provider_factory.get_provider_name(),
+            "provider": provider_info.get("name"),
+            "display_name": provider_info.get("display_name", provider_info.get("name")),
+            "user_id": provider_info.get("user_id"),
             "requires_auth": requires_auth
         })
     except Exception as e:
@@ -94,13 +123,20 @@ def set_data_provider():
 def get_kite_login_url():
     """Get the Kite login URL"""
     try:
-        # Get Kite provider
-        kite_provider = provider_factory.get_provider(force_provider='kite')
+        # Get user_id from query parameter
+        user_id = request.args.get('user_id')
+        
+        # Get Kite provider for the specified user
+        kite_provider = provider_factory.get_provider(force_provider='kite', user_id=user_id)
         
         # Generate login URL
         login_url = kite_provider.get_login_url()
-        logger.info(f"Generated Kite login URL: {login_url}")
-        return jsonify({"success": True, "login_url": login_url})
+        logger.info(f"Generated Kite login URL for user '{user_id or DEFAULT_KITE_USER}': {login_url}")
+        return jsonify({
+            "success": True, 
+            "login_url": login_url,
+            "user_id": user_id or DEFAULT_KITE_USER
+        })
     except Exception as e:
         logger.error(f"Error getting Kite login URL: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
@@ -112,6 +148,9 @@ def kite_callback():
     try:
         # Get request token from query params
         request_token = request.args.get('request_token')
+        
+        # Get user_id from query params (added to login URL by KiteIntegration.get_login_url)
+        user_id = request.args.get('kite_user_id', DEFAULT_KITE_USER)
         
         if not request_token:
             logger.error("No request token in callback")
@@ -129,31 +168,31 @@ def kite_callback():
             </html>
             """, mimetype='text/html')
         
-        logger.info(f"Received request token: {request_token[:5] if request_token else ''}...")
+        logger.info(f"Received request token for user '{user_id}': {request_token[:5] if request_token else ''}...")
         
-        # Get Kite provider
-        kite_provider = provider_factory.get_provider(force_provider='kite')
+        # Get Kite provider for the specific user
+        kite_provider = provider_factory.get_provider(force_provider='kite', user_id=user_id)
         
         # Authenticate with the request token
         success = kite_provider.authenticate(request_token)
         
         if success:
-            logger.info("Kite authentication successful")
+            logger.info(f"Kite authentication successful for user '{user_id}'")
             # Return HTML with JavaScript to communicate with parent window and close
-            return Response("""
+            return Response(f"""
             <html>
             <head>
                 <title>Authentication Successful</title>
                 <style>
-                    body { font-family: Arial, sans-serif; text-align: center; padding: 30px; }
-                    .debug-info { margin-top: 30px; padding: 10px; background: #f5f5f5; border: 1px solid #ddd; text-align: left; font-size: 12px; max-height: 200px; overflow-y: auto; }
-                    .countdown { font-weight: bold; margin: 10px 0; }
-                    button { padding: 10px 20px; margin-top: 10px; cursor: pointer; }
+                    body {{ font-family: Arial, sans-serif; text-align: center; padding: 30px; }}
+                    .debug-info {{ margin-top: 30px; padding: 10px; background: #f5f5f5; border: 1px solid #ddd; text-align: left; font-size: 12px; max-height: 200px; overflow-y: auto; }}
+                    .countdown {{ font-weight: bold; margin: 10px 0; }}
+                    button {{ padding: 10px 20px; margin-top: 10px; cursor: pointer; }}
                 </style>
             </head>
             <body>
                 <h2>Authentication Successful</h2>
-                <p>You have successfully authenticated with Kite.</p>
+                <p>You have successfully authenticated with Kite for user '{user_id}'.</p>
                 <p>This window will close automatically in <span id="countdown">5</span> seconds.</p>
                 <button onclick="closeWindowManually()">Close Window Manually</button>
                 
@@ -164,106 +203,107 @@ def kite_callback():
                 
                 <script>
                     // Function to add debug messages
-                    function debug(message) {
+                    function debug(message) {{
                         console.log('[KiteAuth]', message);
                         const debugDiv = document.getElementById('debugMessages');
                         const timestamp = new Date().toISOString();
-                        debugDiv.innerHTML += `<p>${timestamp}: ${message}</p>`;
-                    }
+                        debugDiv.innerHTML += `<p>${{timestamp}}: ${{message}}</p>`;
+                    }}
                     
                     // Log window information
-                    debug(`Window context - opener exists: ${window.opener !== null}`);
-                    debug(`Parent window exists: ${window.parent !== window}`);
-                    debug(`Current location: ${window.location.href}`);
+                    debug(`Window context - opener exists: ${{window.opener !== null}}`);
+                    debug(`Parent window exists: ${{window.parent !== window}}`);
+                    debug(`Current location: ${{window.location.href}}`);
                     
                     // Function to manually close the window
-                    function closeWindowManually() {
+                    function closeWindowManually() {{
                         debug('Manual window close requested');
-                        try {
+                        try {{
                             window.close();
                             debug('Window close() called');
-                        } catch(e) {
-                            debug(`Error closing window: ${e.message}`);
+                        }} catch(e) {{
+                            debug(`Error closing window: ${{e.message}}`);
                             alert('Could not close window automatically. Please close it manually.');
-                        }
-                    }
+                        }}
+                    }}
                     
                     // Start countdown
                     let seconds = 5;
                     const countdownElement = document.getElementById('countdown');
-                    const countdownInterval = setInterval(function() {
+                    const countdownInterval = setInterval(function() {{
                         seconds--;
                         countdownElement.textContent = seconds;
-                        if (seconds <= 0) {
+                        if (seconds <= 0) {{
                             clearInterval(countdownInterval);
-                        }
-                    }, 1000);
+                        }}
+                    }}, 1000);
                     
                     // Try to send message with unique ID and timestamp
-                    try {
+                    try {{
                         const messageId = 'kite_auth_' + Date.now();
-                        const message = {
+                        const message = {{
                             status: 'success', 
                             provider: 'kite',
+                            user_id: '{user_id}',
                             timestamp: new Date().toISOString(),
                             messageId: messageId
-                        };
+                        }};
                         
-                        debug(`Attempting to send message to parent: ${JSON.stringify(message)}`);
+                        debug(`Attempting to send message to parent: ${{JSON.stringify(message)}}`);
                         
-                        if (window.opener) {
+                        if (window.opener) {{
                             window.opener.postMessage(message, '*');
                             debug('Message sent using window.opener.postMessage');
-                        } else {
+                        }} else {{
                             debug('Warning: window.opener is null, cannot send message');
-                        }
-                    } catch(e) {
-                        debug(`Error sending message to parent: ${e.message}`);
-                    }
+                        }}
+                    }} catch(e) {{
+                        debug(`Error sending message to parent: ${{e.message}}`);
+                    }}
                     
                     // Attempt to close window after delay
-                    setTimeout(function() {
+                    setTimeout(function() {{
                         debug('Window close timeout triggered');
-                        try {
+                        try {{
                             debug('Attempting to close window...');
                             window.close();
                             
                             // Check if window closed successfully
-                            setTimeout(function() {
+                            setTimeout(function() {{
                                 debug('Checking if window closed successfully');
-                                try {
+                                try {{
                                     // If this code runs, window wasn't closed
                                     debug('Window.close() did not work, trying alternate method');
                                     window.open('', '_self').close();
-                                } catch(e) {
-                                    debug(`Error with alternate close method: ${e.message}`);
-                                }
-                            }, 500);
-                        } catch(e) {
-                            debug(`Error closing window: ${e.message}`);
-                        }
-                    }, 5000);
+                                }} catch(e) {{
+                                    debug(`Error with alternate close method: ${{e.message}}`);
+                                }}
+                            }}, 500);
+                        }} catch(e) {{
+                            debug(`Error closing window: ${{e.message}}`);
+                        }}
+                    }}, 5000);
                 </script>
             </body>
             </html>
             """, mimetype='text/html')
         else:
-            logger.error("Kite authentication failed")
+            logger.error(f"Kite authentication failed for user '{user_id}'")
             # Return HTML with JavaScript to communicate failure and close
-            return Response("""
+            return Response(f"""
             <html>
             <head>
                 <title>Authentication Failed</title>
                 <style>
-                    body { font-family: Arial, sans-serif; text-align: center; padding: 30px; }
-                    .debug-info { margin-top: 30px; padding: 10px; background: #f5f5f5; border: 1px solid #ddd; text-align: left; font-size: 12px; max-height: 200px; overflow-y: auto; }
-                    .countdown { font-weight: bold; margin: 10px 0; }
-                    button { padding: 10px 20px; margin-top: 10px; cursor: pointer; }
+                    body {{ font-family: Arial, sans-serif; text-align: center; padding: 30px; }}
+                    .debug-info {{ margin-top: 30px; padding: 10px; background: #f5f5f5; border: 1px solid #ddd; text-align: left; font-size: 12px; max-height: 200px; overflow-y: auto; }}
+                    .countdown {{ font-weight: bold; margin: 10px 0; }}
+                    button {{ padding: 10px 20px; margin-top: 10px; cursor: pointer; }}
                 </style>
             </head>
             <body>
                 <h2>Authentication Failed</h2>
-                <p>Failed to authenticate with Kite.</p>
+                <p>Failed to authenticate with Kite for user '{user_id}'.</p>
                 <p>This window will close in <span id="countdown">5</span> seconds.</p>
                 <button onclick="closeWindowManually()">Close Window Manually</button>
                 
@@ -274,85 +314,86 @@ def kite_callback():
                 
                 <script>
                     // Function to add debug messages
-                    function debug(message) {
+                    function debug(message) {{
                         console.log('[KiteAuth]', message);
                         const debugDiv = document.getElementById('debugMessages');
                         const timestamp = new Date().toISOString();
-                        debugDiv.innerHTML += `<p>${timestamp}: ${message}</p>`;
-                    }
+                        debugDiv.innerHTML += `<p>${{timestamp}}: ${{message}}</p>`;
+                    }}
                     
                     // Log window information
-                    debug(`Window context - opener exists: ${window.opener !== null}`);
-                    debug(`Window context - parent is different: ${window.parent !== window}`);
-                    debug(`Current location: ${window.location.href}`);
+                    debug(`Window context - opener exists: ${{window.opener !== null}}`);
+                    debug(`Window context - parent is different: ${{window.parent !== window}}`);
+                    debug(`Current location: ${{window.location.href}}`);
                     
                     // Function to manually close the window
-                    function closeWindowManually() {
+                    function closeWindowManually() {{
                         debug('Manual window close requested');
-                        try {
+                        try {{
                             window.close();
                             debug('Window close() called');
-                        } catch(e) {
-                            debug(`Error closing window: ${e.message}`);
+                        }} catch(e) {{
+                            debug(`Error closing window: ${{e.message}}`);
                             alert('Could not close window automatically. Please close it manually.');
-                        }
-                    }
+                        }}
+                    }}
                     
                     // Start countdown
                     let seconds = 5;
                     const countdownElement = document.getElementById('countdown');
-                    const countdownInterval = setInterval(function() {
+                    const countdownInterval = setInterval(function() {{
                         seconds--;
                         countdownElement.textContent = seconds;
-                        if (seconds <= 0) {
+                        if (seconds <= 0) {{
                             clearInterval(countdownInterval);
-                        }
-                    }, 1000);
+                        }}
+                    }}, 1000);
                     
                     // Try to send message with unique ID and timestamp
-                    try {
+                    try {{
                         const messageId = 'kite_auth_failed_' + Date.now();
-                        const message = {
+                        const message = {{
                             status: 'failed', 
                             reason: 'auth-error',
+                            user_id: '{user_id}',
                             timestamp: new Date().toISOString(),
                             messageId: messageId
-                        };
+                        }};
                         
-                        debug(`Attempting to send failure message to parent: ${JSON.stringify(message)}`);
+                        debug(`Attempting to send failure message to parent: ${{JSON.stringify(message)}}`);
                         
-                        if (window.opener) {
+                        if (window.opener) {{
                             window.opener.postMessage(message, '*');
                             debug('Failure message sent using window.opener.postMessage');
-                        } else {
+                        }} else {{
                             debug('Warning: window.opener is null, cannot send message');
-                        }
-                    } catch(e) {
-                        debug(`Error sending message to parent: ${e.message}`);
-                    }
+                        }}
+                    }} catch(e) {{
+                        debug(`Error sending message to parent: ${{e.message}}`);
+                    }}
                     
                     // Attempt to close window after delay
-                    setTimeout(function() {
+                    setTimeout(function() {{
                         debug('Window close timeout triggered');
-                        try {
+                        try {{
                             debug('Attempting to close window...');
                             window.close();
                             
                             // Check if window closed successfully
-                            setTimeout(function() {
+                            setTimeout(function() {{
                                 debug('Checking if window closed successfully');
-                                try {
+                                try {{
                                     // If this code runs, window wasn't closed
                                     debug('Window.close() did not work, trying alternate method');
                                     window.open('', '_self').close();
-                                } catch(e) {
-                                    debug(`Error with alternate close method: ${e.message}`);
-                                }
-                            }, 500);
-                        } catch(e) {
-                            debug(`Error closing window: ${e.message}`);
-                        }
-                    }, 5000);
+                                }} catch(e) {{
+                                    debug(`Error with alternate close method: ${{e.message}}`);
+                                }}
+                            }}, 500);
+                        }} catch(e) {{
+                            debug(`Error closing window: ${{e.message}}`);
+                        }}
+                    }}, 5000);
                 </script>
             </body>
             </html>
@@ -369,7 +410,7 @@ def kite_callback():
             <h2>Authentication Error</h2>
             <p>An error occurred during authentication: {str(e)}</p>
             <script>
-                window.opener.postMessage({"status": "error", "reason": "Error: {error_msg}"}, '*');
+                window.opener.postMessage({{"status": "error", "reason": "Error: {error_msg}"}}, '*');
                 setTimeout(function() {{ window.close(); }}, 2000);
             </script>
         </body>
@@ -381,13 +422,16 @@ def kite_callback():
 def verify_kite_token():
     """Verify if the Kite API token is valid"""
     try:
-        # Get Kite provider
-        kite_provider = provider_factory.get_provider(force_provider='kite')
+        # Get user_id from query parameter
+        user_id = request.args.get('user_id')
+        
+        # Get Kite provider for the specified user
+        kite_provider = provider_factory.get_provider(force_provider='kite', user_id=user_id)
         
         # Verify token
         valid = kite_provider.verify_token()
-        logger.info(f"Kite token validation result: {valid}")
-        return jsonify({"success": True, "valid": valid})
+        logger.info(f"Kite token validation result for user '{user_id or DEFAULT_KITE_USER}': {valid}")
+        return jsonify({"success": True, "valid": valid, "user_id": user_id or DEFAULT_KITE_USER})
     except Exception as e:
         logger.error(f"Error verifying Kite token: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
@@ -397,16 +441,83 @@ def verify_kite_token():
 def kite_logout():
     """Invalidate Kite API token"""
     try:
-        logger.info("Logging out from Kite API")
+        # Get user_id from request
+        data = request.json or {}
+        user_id = data.get('user_id')
+        
+        logger.info(f"Logging out from Kite API for user '{user_id or DEFAULT_KITE_USER}'")
         # Update the Kite config to remove the token
-        config = load_kite_config()
+        config = load_kite_config(user_id)
         config["access_token"] = ""
         config["token_timestamp"] = ""
-        save_kite_config(config)
+        save_kite_config(config, user_id)
         
-        return jsonify({"success": True, "message": "Successfully logged out from Kite"})
+        return jsonify({"success": True, "message": f"Successfully logged out from Kite for user '{user_id or DEFAULT_KITE_USER}'"})
     except Exception as e:
         logger.error(f"Error logging out from Kite: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/kite/users', methods=['GET'])
+def get_kite_users():
+    """Get a list of available Kite users"""
+    try:
+        # Get available users from config
+        users = get_available_kite_users()
+        
+        # Format user information including display names
+        user_info = []
+        for user_id in users:
+            # Create a display name for the UI (capitalize the first letter)
+            display_name = f"Kite-{user_id.capitalize()}"
+            
+            # Get token validity status
+            try:
+                provider = KiteIntegration(user_id=user_id)
+                token_valid = provider.verify_token()
+            except:
+                token_valid = False
+            
+            user_info.append({
+                "user_id": user_id,
+                "display_name": display_name,
+                "authenticated": token_valid
+            })
+        
+        return jsonify({"success": True, "users": user_info})
+    except Exception as e:
+        logger.error(f"Error getting Kite users: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/kite/current-user', methods=['GET'])
+def get_current_kite_user():
+    """Get the currently selected Kite user"""
+    try:
+        # Get provider info
+        provider_info = provider_factory.get_provider_info()
+        
+        # Check if using Kite provider
+        if provider_info.get("name") != "kite":
+            return jsonify({"success": True, "using_kite": False})
+        
+        # Get user information
+        user_id = provider_info.get("user_id", DEFAULT_KITE_USER)
+        display_name = provider_info.get("display_name", f"Kite-{user_id.capitalize()}")
+        
+        # Get authentication status
+        provider = provider_factory.get_provider()
+        authenticated = provider.verify_token()
+        
+        return jsonify({
+            "success": True, 
+            "using_kite": True,
+            "user_id": user_id,
+            "display_name": display_name,
+            "authenticated": authenticated
+        })
+    except Exception as e:
+        logger.error(f"Error getting current Kite user: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -434,13 +545,19 @@ def test_connection():
             headers['Cookie'] = '[REDACTED]'
         if 'Authorization' in headers:
             headers['Authorization'] = '[REDACTED]'
+        
+        # Get provider info including user details
+        provider_info = provider_factory.get_provider_info()
+        display_name = provider_info.get("display_name", provider_info.get("name"))
             
         # Return detailed connectivity information
         return jsonify({
             "success": True, 
             "message": "Backend API is reachable",
             "backend_info": {
-                "data_provider": provider_factory.get_provider_name(),
+                "data_provider": provider_info.get("name"),
+                "provider_display_name": display_name,
+                "provider_user_id": provider_info.get("user_id"),
                 "timestamp": datetime.now().isoformat(),
                 "talib_version": indicators.talib_version if hasattr(indicators, 'talib_version') else 'Unknown'
             },

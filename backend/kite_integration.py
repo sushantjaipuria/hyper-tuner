@@ -3,18 +3,24 @@ import logging
 from kiteconnect import KiteConnect
 from datetime import datetime, timedelta
 from data_provider import DataProvider
-from config import load_kite_config, save_kite_config, update_kite_access_token
+from config import load_kite_config, save_kite_config, update_kite_access_token, DEFAULT_KITE_USER
 
 class KiteIntegration(DataProvider):
     """Class to handle integration with Zerodha Kite API, implementing the DataProvider interface"""
     
-    def __init__(self):
-        """Initialize the Kite API integration"""
+    def __init__(self, user_id=DEFAULT_KITE_USER):
+        """
+        Initialize the Kite API integration for a specific user
+        
+        Args:
+            user_id (str): User identifier (default: "sushant")
+        """
         super().__init__()
         self.logger = logging.getLogger(__name__)
+        self.user_id = user_id
         
         # Load configuration from file
-        self.config = load_kite_config()
+        self.config = load_kite_config(user_id)
         self.api_key = self.config.get("api_key", "")
         self.api_secret = self.config.get("api_secret", "")
         self.access_token = self.config.get("access_token", "")
@@ -24,61 +30,66 @@ class KiteIntegration(DataProvider):
         
         # Set access token if available
         if self.access_token:
-            self.logger.info("Setting access token from configuration")
+            self.logger.info(f"Setting access token from configuration for user '{user_id}'")
             try:
                 self.kite.set_access_token(self.access_token)
             except Exception as e:
-                self.logger.error(f"Failed to set access token: {str(e)}")
+                self.logger.error(f"Failed to set access token for user '{user_id}': {str(e)}")
     
     def authenticate(self, request_token=None):
         """Authenticate with the Kite API using request token or stored access token"""
         try:
             if request_token:
                 # Generate access token using request token
-                self.logger.info(f"Authenticating with request token: {request_token[:5] if request_token else ''}...")
+                self.logger.info(f"Authenticating user '{self.user_id}' with request token: {request_token[:5] if request_token else ''}...")
                 data = self.kite.generate_session(request_token, self.api_secret)
                 self.access_token = data["access_token"]
                 self.kite.set_access_token(self.access_token)
                 
                 # Save access token to configuration
-                self.logger.info("Saving new access token to configuration")
-                update_kite_access_token(self.access_token)
+                self.logger.info(f"Saving new access token for user '{self.user_id}' to configuration")
+                update_kite_access_token(self.access_token, self.user_id)
                 
                 return True
             elif self.access_token:
                 # Use stored access token
-                self.logger.info(f"Using stored access token: {self.access_token[:5] if self.access_token else ''}...")
+                self.logger.info(f"Using stored access token for user '{self.user_id}': {self.access_token[:5] if self.access_token else ''}...")
                 self.kite.set_access_token(self.access_token)
                 return True
             else:
-                self.logger.error("No request token or access token available")
+                self.logger.error(f"No request token or access token available for user '{self.user_id}'")
                 return False
         except Exception as e:
-            self.logger.error(f"Authentication failed: {str(e)}")
+            self.logger.error(f"Authentication failed for user '{self.user_id}': {str(e)}")
             return False
     
     def verify_token(self):
         """Verify if the access token is valid by making a lightweight API call"""
         try:
-            self.logger.info("Verifying Kite API token validity")
+            self.logger.info(f"Verifying Kite API token validity for user '{self.user_id}'")
             # Get user profile - lightweight API call
             user_profile = self.kite.profile()
-            self.logger.info(f"Token verified successfully. User: {user_profile.get('user_name', 'Unknown')}")
+            self.logger.info(f"Token verified successfully for user '{self.user_id}'. Kite username: {user_profile.get('user_name', 'Unknown')}")
             return True
         except Exception as e:
-            self.logger.error(f"Token verification failed: {str(e)}")
+            self.logger.error(f"Token verification failed for user '{self.user_id}': {str(e)}")
             return False
     
     def get_login_url(self):
         """Get the login URL for Kite Connect"""
-        return self.kite.login_url()
+        # Base login URL
+        base_url = self.kite.login_url()
+        
+        # Optionally add user_id as a query parameter to help with callback routing
+        # This isn't used by Kite but will be passed back to our callback
+        return f"{base_url}&kite_user_id={self.user_id}"
     
     def get_instruments(self):
         """Get list of instruments available for trading"""
         try:
             return self.kite.instruments()
         except Exception as e:
-            self.logger.error(f"Failed to get instruments: {str(e)}")
+            self.logger.error(f"Failed to get instruments for user '{self.user_id}': {str(e)}")
             return []
     
     def get_historical_data(self, symbol, timeframe, start_date, end_date):
@@ -176,7 +187,7 @@ class KiteIntegration(DataProvider):
             return df
         
         except Exception as e:
-            self.logger.error(f"Failed to get historical data: {str(e)}")
+            self.logger.error(f"Failed to get historical data for user '{self.user_id}': {str(e)}")
             raise
     
     def get_quote(self, symbol):
@@ -198,16 +209,25 @@ class KiteIntegration(DataProvider):
             return self.kite.quote(instrument_token)
         
         except Exception as e:
-            self.logger.error(f"Failed to get quote: {str(e)}")
+            self.logger.error(f"Failed to get quote for user '{self.user_id}': {str(e)}")
             raise
 
     def is_using_placeholders(self):
         """Check if using placeholder credentials"""
         return not self.api_key or not self.api_secret or self.api_key == "your_api_key" or self.api_secret == "your_api_secret"
+    
+    def get_user_info(self):
+        """Get information about the current user"""
+        return {
+            "user_id": self.user_id,
+            "display_name": f"Kite-{self.user_id.capitalize()}",
+            "is_using_placeholders": self.is_using_placeholders()
+        }
 
 # Example usage:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    kite = KiteIntegration()
+    kite = KiteIntegration(user_id="sushant")
+    print(f"User info: {kite.get_user_info()}")
     print(f"Using placeholders: {kite.is_using_placeholders()}")
     print(f"Login URL: {kite.get_login_url()}")

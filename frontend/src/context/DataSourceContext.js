@@ -5,30 +5,92 @@ export const DataSourceContext = createContext();
 
 export const DataSourceProvider = ({ children }) => {
   const [dataProvider, setDataProvider] = useState('yahoo');
+  const [dataProviderDisplayName, setDataProviderDisplayName] = useState('Yahoo Finance');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [requiresAuth, setRequiresAuth] = useState(false);
   const [tokenValid, setTokenValid] = useState(false);
   const [lastTokenCheck, setLastTokenCheck] = useState(null);
+  const [kiteUsers, setKiteUsers] = useState([]);
+  const [currentKiteUser, setCurrentKiteUser] = useState(null);
+  const [kiteUsersLoaded, setKiteUsersLoaded] = useState(false);
+  
+  // Log helper
+  const logDebug = (message, data = null) => {
+    const timestamp = new Date().toISOString();
+    const logMessage = `[${timestamp}] ${message}`;
+    console.log('%c[DataSourceContext]', 'color: #9c27b0; font-weight: bold', logMessage, data || '');
+    
+    // Save to session storage for persistence
+    const logs = JSON.parse(sessionStorage.getItem('kiteAuthLogs') || '[]');
+    logs.push({ timestamp, message, data: data ? JSON.stringify(data) : null });
+    // Keep only last 50 logs
+    if (logs.length > 50) logs.shift();
+    sessionStorage.setItem('kiteAuthLogs', JSON.stringify(logs));
+  };
+
+  // Fetch list of available Kite users
+  const fetchKiteUsers = async () => {
+    try {
+      logDebug("Fetching available Kite users...");
+      setLoading(true);
+      
+      const response = await api.getKiteUsers();
+      
+      if (response.success) {
+        logDebug("Received Kite users", response.users);
+        setKiteUsers(response.users);
+        return response.users;
+      } else {
+        logDebug("Failed to fetch Kite users", response.error);
+        setError(response.error || 'Failed to fetch Kite users');
+        return [];
+      }
+    } catch (err) {
+      logDebug("Error fetching Kite users", err.message);
+      setError(err.message || 'An error occurred');
+      return [];
+    } finally {
+      setKiteUsersLoaded(true);
+      setLoading(false);
+    }
+  };
   
   // Fetch initial data provider info
   useEffect(() => {
     const fetchDataProviderInfo = async () => {
       try {
-        console.log("Fetching initial data provider info...");
+        logDebug("Fetching initial data provider info...");
         setLoading(true);
         
+        // Fetch available Kite users
+        const users = await fetchKiteUsers();
+        
         const info = await api.getDataProviderInfo();
-        console.log("Received data provider info:", info);
+        logDebug("Received data provider info:", info);
         
         setDataProvider(info.provider);
         
+        // Set display name from API response or use fallback
+        if (info.display_name) {
+          setDataProviderDisplayName(info.display_name);
+        } else if (info.provider === 'kite') {
+          setDataProviderDisplayName('Zerodha Kite');
+        } else {
+          setDataProviderDisplayName('Yahoo Finance');
+        }
+        
+        // Set current Kite user if available
+        if (info.user_id) {
+          setCurrentKiteUser(info.user_id);
+        }
+        
         // Check token validity if Kite is selected
         if (info.provider === 'kite') {
-          await checkKiteToken();
+          await checkKiteToken(info.user_id);
         }
       } catch (err) {
-        console.error("Failed to fetch data provider info:", err);
+        logDebug("Failed to fetch data provider info:", err.message);
         setError('Failed to connect to backend');
       } finally {
         setLoading(false);
@@ -38,18 +100,60 @@ export const DataSourceProvider = ({ children }) => {
     fetchDataProviderInfo();
   }, []);
   
+  // Generate provider options for the dropdown
+  const getDataProviderOptions = useCallback(() => {
+    const options = [
+      { value: 'yahoo', label: 'Yahoo Finance' }
+    ];
+    
+    // Add options for Kite users
+    if (kiteUsers && kiteUsers.length > 0) {
+      kiteUsers.forEach(user => {
+        options.push({
+          value: 'kite',
+          user_id: user.user_id,
+          label: user.display_name,
+          authenticated: user.authenticated
+        });
+      });
+    } else if (!kiteUsersLoaded) {
+      // If Kite users haven't been loaded yet, add a generic Kite option
+      options.push({ value: 'kite', label: 'Zerodha Kite' });
+    }
+    
+    return options;
+  }, [kiteUsers, kiteUsersLoaded]);
+  
   // Change data provider
-  const changeDataProvider = async (provider) => {
+  const changeDataProvider = async (provider, userId = null) => {
     try {
       setLoading(true);
       setError(null);
       
-      console.log(`Changing data provider to: ${provider}`);
+      logDebug(`Changing data provider to: ${provider}${userId ? ` for user: ${userId}` : ''}`);
       
-      const response = await api.setDataProvider(provider);
+      const response = await api.setDataProvider(provider, userId);
       
       if (response.success) {
         setDataProvider(response.provider);
+        
+        // Set display name and current user if available
+        if (response.display_name) {
+          setDataProviderDisplayName(response.display_name);
+        } else {
+          setDataProviderDisplayName(
+            response.provider === 'kite' 
+              ? `Kite${userId ? `-${userId.charAt(0).toUpperCase() + userId.slice(1)}` : ''}`
+              : 'Yahoo Finance'
+          );
+        }
+        
+        if (response.user_id) {
+          setCurrentKiteUser(response.user_id);
+        } else if (provider === 'yahoo') {
+          setCurrentKiteUser(null);
+        }
+        
         setRequiresAuth(response.requires_auth);
         
         // If provider is Kite and authentication is required, set state
@@ -60,7 +164,7 @@ export const DataSourceProvider = ({ children }) => {
         setError(response.error || 'Failed to change data provider');
       }
     } catch (err) {
-      console.error("Error changing data provider:", err);
+      logDebug("Error changing data provider:", err.message);
       setError(err.message || 'An error occurred');
     } finally {
       setLoading(false);
@@ -68,10 +172,10 @@ export const DataSourceProvider = ({ children }) => {
   };
   
   // Check Kite token validity with enhanced debugging
-  const checkKiteToken = async (force = false) => {
+  const checkKiteToken = async (userId = null, force = false) => {
     try {
       // Add to session storage debug log
-      logDebug(`Checking Kite token validity (force=${force})`);
+      logDebug(`Checking Kite token validity (force=${force}, userId=${userId || 'default'})`);
       
       // Check if we need to revalidate based on time
       const now = new Date();
@@ -88,7 +192,7 @@ export const DataSourceProvider = ({ children }) => {
       
       logDebug("Making API call to verify Kite token");
       const startTime = performance.now();
-      const response = await api.verifyKiteToken();
+      const response = await api.verifyKiteToken(userId);
       const endTime = performance.now();
       
       // Log API call performance
@@ -104,11 +208,26 @@ export const DataSourceProvider = ({ children }) => {
         setRequiresAuth(!response.valid);
         setLastTokenCheck(now);
         
+        // Update currentKiteUser if returned in the response
+        if (response.user_id) {
+          setCurrentKiteUser(response.user_id);
+        }
+        
         logDebug('Updated token state', {
           previous: oldState,
           current: { tokenValid: response.valid, requiresAuth: !response.valid },
           changed: (oldState.tokenValid !== response.valid || oldState.requiresAuth === response.valid)
         });
+        
+        // If token verification failed, update the user's authenticated status in the kiteUsers array
+        if (kiteUsers.length > 0 && !response.valid && response.user_id) {
+          const updatedUsers = kiteUsers.map(user => 
+            user.user_id === response.user_id 
+              ? { ...user, authenticated: false } 
+              : user
+          );
+          setKiteUsers(updatedUsers);
+        }
         
         return response.valid;
       } else {
@@ -125,7 +244,8 @@ export const DataSourceProvider = ({ children }) => {
       const errorInfo = {
         message: err.message,
         name: err.name,
-        stack: err.stack ? err.stack.split('\n')[0] : 'No stack trace'
+        stack: err.stack ? err.stack.split('\n')[0] : 'No stack trace',
+        userId: userId || 'default'
       };
       logDebug('Detailed error info', errorInfo);
       
@@ -149,20 +269,6 @@ export const DataSourceProvider = ({ children }) => {
     
     // If past trading hours and we're using Kite, we should verify
     return dataProvider === 'kite' && isPastTradingHours;
-  };
-  
-  // Add logging helpers and debugging flags
-  const logDebug = (message, data = null) => {
-    const timestamp = new Date().toISOString();
-    const logMessage = `[${timestamp}] ${message}`;
-    console.log('%c[DataSourceContext]', 'color: #9c27b0; font-weight: bold', logMessage, data || '');
-    
-    // Save to session storage for persistence
-    const logs = JSON.parse(sessionStorage.getItem('kiteAuthLogs') || '[]');
-    logs.push({ timestamp, message, data: data ? JSON.stringify(data) : null });
-    // Keep only last 50 logs
-    if (logs.length > 50) logs.shift();
-    sessionStorage.setItem('kiteAuthLogs', JSON.stringify(logs));
   };
   
   // Debug function to check if listener is active
@@ -283,11 +389,15 @@ export const DataSourceProvider = ({ children }) => {
     if (event.data.status === 'success' && event.data.provider === 'kite') {
       logDebug('Authentication successful message received', event.data);
       
+      // Extract user_id from the message if available
+      const userId = event.data.user_id || currentKiteUser;
+      
       // Store the successful message for debugging
       sessionStorage.setItem('lastKiteAuthSuccess', JSON.stringify({
         data: event.data,
         time: new Date().toISOString(),
-        origin: event.origin
+        origin: event.origin,
+        userId: userId
       }));
       
       // Set as Kite provider and update token status
@@ -297,31 +407,54 @@ export const DataSourceProvider = ({ children }) => {
       setRequiresAuth(false);
       setError(null);
       
+      // Update display name if we have a user_id
+      if (userId) {
+        setCurrentKiteUser(userId);
+        setDataProviderDisplayName(`Kite-${userId.charAt(0).toUpperCase() + userId.slice(1)}`);
+        
+        // Update the user's authenticated status in the kiteUsers array
+        if (kiteUsers.length > 0) {
+          const updatedUsers = kiteUsers.map(user => 
+            user.user_id === userId 
+              ? { ...user, authenticated: true } 
+              : user
+          );
+          setKiteUsers(updatedUsers);
+        }
+      } else {
+        setDataProviderDisplayName('Zerodha Kite');
+      }
+      
       // Verify token to ensure everything is properly set up
       logDebug('Verifying token after authentication');
       try {
-        const result = await checkKiteToken(true);
-        logDebug('Token verification result', { result });
+        const result = await checkKiteToken(userId, true);
+        logDebug('Token verification result', { result, userId });
       } catch (error) {
-        logDebug('Error verifying token', { error: error.message });
+        logDebug('Error verifying token', { error: error.message, userId });
       }
       
       // Log final state
       logDebug('Authentication process completed', {
         provider: 'kite',
         tokenValid: true,
-        requiresAuth: false
+        requiresAuth: false,
+        userId: userId
       });
       
     } else if (event.data.status === 'failed' || event.data.status === 'error') {
       const reason = event.data.reason || 'Unknown error';
       logDebug('Authentication failed message received', { status: event.data.status, reason });
       
+      // Extract user_id from the message if available
+      const userId = event.data.user_id || currentKiteUser;
+      
       // Store the failure message for debugging
       sessionStorage.setItem('lastKiteAuthFailure', JSON.stringify({
         data: event.data,
         time: new Date().toISOString(),
-        origin: event.origin
+        origin: event.origin,
+        userId: userId
       }));
       
       setError(`Authentication failed: ${reason}`);
@@ -331,11 +464,21 @@ export const DataSourceProvider = ({ children }) => {
         logDebug('Updating Kite provider state after authentication failure');
         setTokenValid(false);
         setRequiresAuth(true);
+        
+        // Update the user's authenticated status in the kiteUsers array
+        if (kiteUsers.length > 0 && userId) {
+          const updatedUsers = kiteUsers.map(user => 
+            user.user_id === userId 
+              ? { ...user, authenticated: false } 
+              : user
+          );
+          setKiteUsers(updatedUsers);
+        }
       }
     } else {
       logDebug('Unrecognized message format', event.data);
     }
-  }, [dataProvider, tokenValid, requiresAuth, checkKiteToken]);
+  }, [dataProvider, tokenValid, requiresAuth, currentKiteUser, kiteUsers]);
   
   // Set up event listener for popup messages with detailed logging
   useEffect(() => {
@@ -381,9 +524,12 @@ export const DataSourceProvider = ({ children }) => {
       getLastMessage: () => JSON.parse(sessionStorage.getItem('lastKiteAuthMessage') || 'null'),
       getState: () => ({
         dataProvider,
+        dataProviderDisplayName,
         tokenValid,
         requiresAuth,
         error,
+        currentKiteUser,
+        kiteUsers,
         listenerActive: sessionStorage.getItem('kiteAuthListenerActive') === 'true',
         backupListenerActive: sessionStorage.getItem('kiteAuthBackupListener') === 'active',
         messageCount: parseInt(sessionStorage.getItem('kiteAuthMessageCount') || '0'),
@@ -396,19 +542,21 @@ export const DataSourceProvider = ({ children }) => {
     return () => {
       delete window.kiteAuthDebug;
     };
-  }, [dataProvider, tokenValid, requiresAuth, error]);
+  }, [dataProvider, dataProviderDisplayName, tokenValid, requiresAuth, error, currentKiteUser, kiteUsers]);
   
   // Initiate Kite authentication with enhanced debugging
-  const initiateKiteAuth = async () => {
+  const initiateKiteAuth = async (userId = null) => {
     try {
       setLoading(true);
-      logDebug("Initiating Kite authentication...");
+      logDebug(`Initiating Kite authentication for user: ${userId || currentKiteUser || 'default'}`);
       
       // Log current state before initiating auth
       logDebug("Current state before authentication", {
         dataProvider,
         tokenValid,
         requiresAuth,
+        currentKiteUser,
+        requestedUser: userId,
         listenerActive: sessionStorage.getItem('kiteAuthListenerActive') === 'true'
       });
       
@@ -430,7 +578,7 @@ export const DataSourceProvider = ({ children }) => {
         logDebug("Re-added message event listener");
       }
       
-      const response = await api.getKiteLoginUrl();
+      const response = await api.getKiteLoginUrl(userId || currentKiteUser);
       
       if (response.success) {
         logDebug("Opening Kite login URL", response.login_url);
@@ -465,7 +613,7 @@ export const DataSourceProvider = ({ children }) => {
               // Check token status after a delay
               setTimeout(async () => {
                 logDebug("Checking token status after popup closed");
-                const isValid = await checkKiteToken(true);
+                const isValid = await checkKiteToken(userId || currentKiteUser, true);
                 logDebug(`Token check after popup close: ${isValid ? 'valid' : 'invalid'}`);
               }, 1000);
             }
@@ -484,18 +632,28 @@ export const DataSourceProvider = ({ children }) => {
     }
   };
   
+  // Refresh Kite users list
+  const refreshKiteUsers = async () => {
+    return await fetchKiteUsers();
+  };
+  
   return (
     <DataSourceContext.Provider
       value={{
         dataProvider,
+        dataProviderDisplayName,
         loading,
         error,
         requiresAuth,
         tokenValid,
+        kiteUsers,
+        currentKiteUser,
+        getDataProviderOptions,
         changeDataProvider,
         checkKiteToken,
         initiateKiteAuth,
-        shouldVerifyToken
+        shouldVerifyToken,
+        refreshKiteUsers
       }}
     >
       {children}

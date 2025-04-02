@@ -1,11 +1,22 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { DataSourceContext } from '../context/DataSourceContext';
 
-const KiteAuthModal = ({ isOpen, onClose }) => {
-  const { initiateKiteAuth, changeDataProvider, tokenValid, requiresAuth, checkKiteToken } = useContext(DataSourceContext);
+const KiteAuthModal = ({ isOpen, onClose, userId }) => {
+  const { 
+    initiateKiteAuth, 
+    changeDataProvider, 
+    tokenValid, 
+    requiresAuth, 
+    checkKiteToken,
+    currentKiteUser
+  } = useContext(DataSourceContext);
+  
   const [isLoading, setIsLoading] = useState(false);
   const [debugVisible, setDebugVisible] = useState(false);
   const [debugInfo, setDebugInfo] = useState({});
+  
+  // Get the effective user ID (from props or context)
+  const effectiveUserId = userId || currentKiteUser;
   
   // Debug logging helper
   const logModalDebug = (message, data = null) => {
@@ -22,10 +33,14 @@ const KiteAuthModal = ({ isOpen, onClose }) => {
   // Track modal opens and closures
   useEffect(() => {
     if (isOpen) {
-      logModalDebug('Kite auth modal opened', { tokenValid, requiresAuth });
+      logModalDebug('Kite auth modal opened', { 
+        tokenValid, 
+        requiresAuth, 
+        userId: effectiveUserId 
+      });
       sessionStorage.setItem('kiteAuthModalOpened', new Date().toISOString());
     }
-  }, [isOpen, tokenValid, requiresAuth]);
+  }, [isOpen, tokenValid, requiresAuth, effectiveUserId]);
   
   // When the modal is open, refresh debug info
   useEffect(() => {
@@ -44,6 +59,7 @@ const KiteAuthModal = ({ isOpen, onClose }) => {
         context: {
           tokenValid,
           requiresAuth,
+          currentUser: effectiveUserId || 'none',
           timestamp: new Date().toISOString()
         }
       };
@@ -58,10 +74,10 @@ const KiteAuthModal = ({ isOpen, onClose }) => {
     const interval = setInterval(updateDebugInfo, 1000);
     
     return () => clearInterval(interval);
-  }, [isOpen, debugVisible, tokenValid, requiresAuth]);
+  }, [isOpen, debugVisible, tokenValid, requiresAuth, effectiveUserId]);
   
   const handleLoginClick = async () => {
-    logModalDebug('Login button clicked');
+    logModalDebug('Login button clicked', { userId: effectiveUserId });
     setIsLoading(true);
     
     try {
@@ -71,12 +87,12 @@ const KiteAuthModal = ({ isOpen, onClose }) => {
         logModalDebug(`Message listener pre-check: ${listenerActive ? 'active' : 'inactive'}`);
       }
       
-      // Initiate authentication
-      await initiateKiteAuth();
-      logModalDebug('initiateKiteAuth completed');
+      // Initiate authentication with user ID
+      await initiateKiteAuth(effectiveUserId);
+      logModalDebug('initiateKiteAuth completed', { userId: effectiveUserId });
       
     } catch (err) {
-      logModalDebug('Error during authentication', err.message);
+      logModalDebug('Error during authentication', { error: err.message, userId: effectiveUserId });
     } finally {
       setIsLoading(false);
     }
@@ -91,14 +107,14 @@ const KiteAuthModal = ({ isOpen, onClose }) => {
   };
   
   const handleManualCheck = async () => {
-    logModalDebug('Manual token check requested');
+    logModalDebug('Manual token check requested', { userId: effectiveUserId });
     setIsLoading(true);
     
     try {
-      const result = await checkKiteToken(true);
-      logModalDebug('Manual token check completed', { valid: result });
+      const result = await checkKiteToken(effectiveUserId, true);
+      logModalDebug('Manual token check completed', { valid: result, userId: effectiveUserId });
     } catch (err) {
-      logModalDebug('Error checking token', err.message);
+      logModalDebug('Error checking token', { error: err.message, userId: effectiveUserId });
     } finally {
       setIsLoading(false);
     }
@@ -114,7 +130,10 @@ const KiteAuthModal = ({ isOpen, onClose }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 max-w-md w-full">
-        <h3 className="text-lg font-medium mb-4">Kite Authentication Required</h3>
+        <h3 className="text-lg font-medium mb-4">
+          Kite Authentication Required
+          {effectiveUserId && ` for ${effectiveUserId.charAt(0).toUpperCase() + effectiveUserId.slice(1)}`}
+        </h3>
         <p className="mb-4">
           To use Zerodha Kite as a data source, you need to authenticate with your Kite account.
           Click the button below to start the authentication process.
@@ -126,6 +145,7 @@ const KiteAuthModal = ({ isOpen, onClose }) => {
             <h4 className="font-bold mb-1">Debug Information</h4>
             <p>Token valid: {tokenValid ? 'Yes' : 'No'}</p>
             <p>Requires auth: {requiresAuth ? 'Yes' : 'No'}</p>
+            <p>User ID: {effectiveUserId || 'None'}</p>
             <p>Listener active: {debugInfo?.sessionStorage?.kiteAuthListenerActive || 'Unknown'}</p>
             <p>Backup listener: {debugInfo?.sessionStorage?.kiteAuthBackupListener || 'Unknown'}</p>
             <p>Message count: {debugInfo?.sessionStorage?.kiteAuthMessageCount || '0'}</p>

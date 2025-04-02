@@ -8,13 +8,18 @@ import KiteAuthModal from './components/KiteAuthModal';
 function AppContent() {
   const { 
     dataProvider, 
+    dataProviderDisplayName,
     loading, 
     error, 
     requiresAuth,
-    changeDataProvider
+    changeDataProvider,
+    getDataProviderOptions,
+    refreshKiteUsers,
+    currentKiteUser
   } = useContext(DataSourceContext);
   
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [refreshingUsers, setRefreshingUsers] = useState(false);
   
   // Show auth modal if Kite requires authentication
   useEffect(() => {
@@ -46,6 +51,24 @@ function AppContent() {
     handleAuthCallback();
   }, []);
   
+  // Handle data provider selection change
+  const handleProviderChange = (e) => {
+    const value = e.target.value;
+    const selectedIndex = e.target.selectedIndex;
+    const selectedOption = e.target.options[selectedIndex];
+    const userId = selectedOption.getAttribute('data-user-id');
+    
+    // Call changeDataProvider with the provider value and userId if available
+    changeDataProvider(value, userId);
+  };
+  
+  // Handle refresh button click
+  const handleRefreshUsers = async () => {
+    setRefreshingUsers(true);
+    await refreshKiteUsers();
+    setRefreshingUsers(false);
+  };
+  
   return (
     <div className="bg-gray-100 min-h-screen">
       <header className="bg-blue-700 text-white p-4 shadow-md">
@@ -61,11 +84,26 @@ function AppContent() {
                 <select
                   className="bg-blue-700 border border-blue-600 rounded px-2 py-1 text-white"
                   value={dataProvider}
-                  onChange={(e) => changeDataProvider(e.target.value)}
+                  onChange={handleProviderChange}
                 >
-                  <option value="yahoo">Yahoo Finance</option>
-                  <option value="kite">Zerodha Kite</option>
+                  {getDataProviderOptions().map((option, index) => (
+                    <option 
+                      key={`${option.value}-${option.user_id || index}`}
+                      value={option.value}
+                      data-user-id={option.user_id}
+                    >
+                      {option.label} {option.authenticated === false ? '(Login Required)' : ''}
+                    </option>
+                  ))}
                 </select>
+                <button
+                  className="ml-2 text-xs bg-blue-600 hover:bg-blue-700 rounded p-1"
+                  onClick={handleRefreshUsers}
+                  disabled={refreshingUsers}
+                  title="Refresh data sources"
+                >
+                  {refreshingUsers ? '...' : '↻'}
+                </button>
                 <span className={`ml-2 w-2 h-2 rounded-full ${dataProvider === 'yahoo' ? 'bg-yellow-400' : 'bg-green-400'}`}></span>
               </div>
             )}
@@ -97,7 +135,8 @@ function AppContent() {
       {/* Kite Authentication Modal */}
       <KiteAuthModal 
         isOpen={showAuthModal} 
-        onClose={() => setShowAuthModal(false)} 
+        onClose={() => setShowAuthModal(false)}
+        userId={currentKiteUser}
       />
     </div>
   );

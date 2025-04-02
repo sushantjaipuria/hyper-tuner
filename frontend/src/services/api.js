@@ -156,33 +156,70 @@ const api = {
   // Get data provider info
   getDataProviderInfo: async () => {
     const response = await axios.get(`${API_URL}/data-provider`);
-    return {
-      provider: response.data.provider,
-      timestamp: response.data.timestamp
-    };
+    return response.data;
   },
   
   // Set data provider
-  setDataProvider: async (provider) => {
-    const response = await axios.post(`${API_URL}/set-data-provider`, { provider });
+  setDataProvider: async (provider, userId = null) => {
+    const payload = { provider };
+    
+    // Add user_id to the payload if it's provided and this is a Kite provider
+    if (userId && (provider === 'kite' || provider.startsWith('kite-'))) {
+      payload.user_id = userId;
+    }
+    
+    const response = await axios.post(`${API_URL}/set-data-provider`, payload);
+    return response.data;
+  },
+  
+  // Get available Kite users
+  getKiteUsers: async () => {
+    const response = await axios.get(`${API_URL}/kite/users`);
+    return response.data;
+  },
+  
+  // Get current Kite user
+  getCurrentKiteUser: async () => {
+    const response = await axios.get(`${API_URL}/kite/current-user`);
     return response.data;
   },
   
   // Get Kite login URL
-  getKiteLoginUrl: async () => {
-    const response = await axios.get(`${API_URL}/kite/login-url`);
+  getKiteLoginUrl: async (userId = null) => {
+    let url = `${API_URL}/kite/login-url`;
+    
+    // Add user_id as a query parameter if provided
+    if (userId) {
+      url += `?user_id=${encodeURIComponent(userId)}`;
+    }
+    
+    const response = await axios.get(url);
     return response.data;
   },
   
   // Verify Kite token
-  verifyKiteToken: async () => {
-    const response = await axios.get(`${API_URL}/kite/verify-token`);
+  verifyKiteToken: async (userId = null) => {
+    let url = `${API_URL}/kite/verify-token`;
+    
+    // Add user_id as a query parameter if provided
+    if (userId) {
+      url += `?user_id=${encodeURIComponent(userId)}`;
+    }
+    
+    const response = await axios.get(url);
     return response.data;
   },
   
   // Kite logout
-  kiteLogout: async () => {
-    const response = await axios.post(`${API_URL}/kite/logout`);
+  kiteLogout: async (userId = null) => {
+    const payload = {};
+    
+    // Add user_id to the payload if provided
+    if (userId) {
+      payload.user_id = userId;
+    }
+    
+    const response = await axios.post(`${API_URL}/kite/logout`, payload);
     return response.data;
   },
   
