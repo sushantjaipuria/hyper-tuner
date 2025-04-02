@@ -142,14 +142,107 @@ def kite_callback():
             # Return HTML with JavaScript to communicate with parent window and close
             return Response("""
             <html>
-            <head><title>Authentication Successful</title></head>
+            <head>
+                <title>Authentication Successful</title>
+                <style>
+                    body { font-family: Arial, sans-serif; text-align: center; padding: 30px; }
+                    .debug-info { margin-top: 30px; padding: 10px; background: #f5f5f5; border: 1px solid #ddd; text-align: left; font-size: 12px; max-height: 200px; overflow-y: auto; }
+                    .countdown { font-weight: bold; margin: 10px 0; }
+                    button { padding: 10px 20px; margin-top: 10px; cursor: pointer; }
+                </style>
+            </head>
             <body>
                 <h2>Authentication Successful</h2>
                 <p>You have successfully authenticated with Kite.</p>
-                <p>This window will close automatically.</p>
+                <p>This window will close automatically in <span id="countdown">5</span> seconds.</p>
+                <button onclick="closeWindowManually()">Close Window Manually</button>
+                
+                <div class="debug-info" id="debugInfo">
+                    <p><strong>Debug Information:</strong></p>
+                    <div id="debugMessages"></div>
+                </div>
+                
                 <script>
-                    window.opener.postMessage({"status": "success", "provider": "kite"}, '*');
-                    setTimeout(function() { window.close(); }, 1500);
+                    // Function to add debug messages
+                    function debug(message) {
+                        console.log('[KiteAuth]', message);
+                        const debugDiv = document.getElementById('debugMessages');
+                        const timestamp = new Date().toISOString();
+                        debugDiv.innerHTML += `<p>${timestamp}: ${message}</p>`;
+                    }
+                    
+                    // Log window information
+                    debug(`Window context - opener exists: ${window.opener !== null}`);
+                    debug(`Parent window exists: ${window.parent !== window}`);
+                    debug(`Current location: ${window.location.href}`);
+                    
+                    // Function to manually close the window
+                    function closeWindowManually() {
+                        debug('Manual window close requested');
+                        try {
+                            window.close();
+                            debug('Window close() called');
+                        } catch(e) {
+                            debug(`Error closing window: ${e.message}`);
+                            alert('Could not close window automatically. Please close it manually.');
+                        }
+                    }
+                    
+                    // Start countdown
+                    let seconds = 5;
+                    const countdownElement = document.getElementById('countdown');
+                    const countdownInterval = setInterval(function() {
+                        seconds--;
+                        countdownElement.textContent = seconds;
+                        if (seconds <= 0) {
+                            clearInterval(countdownInterval);
+                        }
+                    }, 1000);
+                    
+                    // Try to send message with unique ID and timestamp
+                    try {
+                        const messageId = 'kite_auth_' + Date.now();
+                        const message = {
+                            status: 'success', 
+                            provider: 'kite',
+                            timestamp: new Date().toISOString(),
+                            messageId: messageId
+                        };
+                        
+                        debug(`Attempting to send message to parent: ${JSON.stringify(message)}`);
+                        
+                        if (window.opener) {
+                            window.opener.postMessage(message, '*');
+                            debug('Message sent using window.opener.postMessage');
+                        } else {
+                            debug('Warning: window.opener is null, cannot send message');
+                        }
+                    } catch(e) {
+                        debug(`Error sending message to parent: ${e.message}`);
+                    }
+                    
+                    // Attempt to close window after delay
+                    setTimeout(function() {
+                        debug('Window close timeout triggered');
+                        try {
+                            debug('Attempting to close window...');
+                            window.close();
+                            
+                            // Check if window closed successfully
+                            setTimeout(function() {
+                                debug('Checking if window closed successfully');
+                                try {
+                                    // If this code runs, window wasn't closed
+                                    debug('Window.close() did not work, trying alternate method');
+                                    window.open('', '_self').close();
+                                } catch(e) {
+                                    debug(`Error with alternate close method: ${e.message}`);
+                                }
+                            }, 500);
+                        } catch(e) {
+                            debug(`Error closing window: ${e.message}`);
+                        }
+                    }, 5000);
                 </script>
             </body>
             </html>
@@ -159,13 +252,107 @@ def kite_callback():
             # Return HTML with JavaScript to communicate failure and close
             return Response("""
             <html>
-            <head><title>Authentication Failed</title></head>
+            <head>
+                <title>Authentication Failed</title>
+                <style>
+                    body { font-family: Arial, sans-serif; text-align: center; padding: 30px; }
+                    .debug-info { margin-top: 30px; padding: 10px; background: #f5f5f5; border: 1px solid #ddd; text-align: left; font-size: 12px; max-height: 200px; overflow-y: auto; }
+                    .countdown { font-weight: bold; margin: 10px 0; }
+                    button { padding: 10px 20px; margin-top: 10px; cursor: pointer; }
+                </style>
+            </head>
             <body>
                 <h2>Authentication Failed</h2>
                 <p>Failed to authenticate with Kite.</p>
+                <p>This window will close in <span id="countdown">5</span> seconds.</p>
+                <button onclick="closeWindowManually()">Close Window Manually</button>
+                
+                <div class="debug-info" id="debugInfo">
+                    <p><strong>Debug Information:</strong></p>
+                    <div id="debugMessages"></div>
+                </div>
+                
                 <script>
-                    window.opener.postMessage({"status": "failed", "reason": "auth-error"}, '*');
-                    setTimeout(function() { window.close(); }, 2000);
+                    // Function to add debug messages
+                    function debug(message) {
+                        console.log('[KiteAuth]', message);
+                        const debugDiv = document.getElementById('debugMessages');
+                        const timestamp = new Date().toISOString();
+                        debugDiv.innerHTML += `<p>${timestamp}: ${message}</p>`;
+                    }
+                    
+                    // Log window information
+                    debug(`Window context - opener exists: ${window.opener !== null}`);
+                    debug(`Window context - parent is different: ${window.parent !== window}`);
+                    debug(`Current location: ${window.location.href}`);
+                    
+                    // Function to manually close the window
+                    function closeWindowManually() {
+                        debug('Manual window close requested');
+                        try {
+                            window.close();
+                            debug('Window close() called');
+                        } catch(e) {
+                            debug(`Error closing window: ${e.message}`);
+                            alert('Could not close window automatically. Please close it manually.');
+                        }
+                    }
+                    
+                    // Start countdown
+                    let seconds = 5;
+                    const countdownElement = document.getElementById('countdown');
+                    const countdownInterval = setInterval(function() {
+                        seconds--;
+                        countdownElement.textContent = seconds;
+                        if (seconds <= 0) {
+                            clearInterval(countdownInterval);
+                        }
+                    }, 1000);
+                    
+                    // Try to send message with unique ID and timestamp
+                    try {
+                        const messageId = 'kite_auth_failed_' + Date.now();
+                        const message = {
+                            status: 'failed', 
+                            reason: 'auth-error',
+                            timestamp: new Date().toISOString(),
+                            messageId: messageId
+                        };
+                        
+                        debug(`Attempting to send failure message to parent: ${JSON.stringify(message)}`);
+                        
+                        if (window.opener) {
+                            window.opener.postMessage(message, '*');
+                            debug('Failure message sent using window.opener.postMessage');
+                        } else {
+                            debug('Warning: window.opener is null, cannot send message');
+                        }
+                    } catch(e) {
+                        debug(`Error sending message to parent: ${e.message}`);
+                    }
+                    
+                    // Attempt to close window after delay
+                    setTimeout(function() {
+                        debug('Window close timeout triggered');
+                        try {
+                            debug('Attempting to close window...');
+                            window.close();
+                            
+                            // Check if window closed successfully
+                            setTimeout(function() {
+                                debug('Checking if window closed successfully');
+                                try {
+                                    // If this code runs, window wasn't closed
+                                    debug('Window.close() did not work, trying alternate method');
+                                    window.open('', '_self').close();
+                                } catch(e) {
+                                    debug(`Error with alternate close method: ${e.message}`);
+                                }
+                            }, 500);
+                        } catch(e) {
+                            debug(`Error closing window: ${e.message}`);
+                        }
+                    }, 5000);
                 </script>
             </body>
             </html>
