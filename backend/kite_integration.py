@@ -18,9 +18,11 @@ class KiteIntegration(DataProvider):
         """Initialize the Kite API integration"""
         super().__init__()
         
-        # Get API key and secret from environment variables or use defaults
-        self.api_key = os.environ.get('KITE_API_KEY', 'your_api_key')
-        self.api_secret = os.environ.get('KITE_API_SECRET', 'your_api_secret')
+        # Load configuration from config file or use environment variables as fallback
+        self.config_path = os.path.join(os.path.dirname(__file__), 'config.json')
+        self.api_key = None
+        self.api_secret = None
+        self._load_config()
         
         # Path to store the access token
         self.token_path = os.path.join(os.path.dirname(__file__), 'kite_token.json')
@@ -34,6 +36,30 @@ class KiteIntegration(DataProvider):
         # Try to load existing token
         self._load_token()
         
+    def _load_config(self):
+        """Load API key and secret from config file or environment variables"""
+        try:
+            # First try to load from config file
+            if os.path.exists(self.config_path):
+                with open(self.config_path, 'r') as f:
+                    config = json.load(f)
+                    if 'kite' in config and 'api_key' in config['kite'] and 'api_secret' in config['kite']:
+                        self.api_key = config['kite']['api_key']
+                        self.api_secret = config['kite']['api_secret']
+                        self.logger.info("Loaded Kite API credentials from config file")
+                        return
+                    else:
+                        self.logger.warning("Config file exists but missing kite credentials")
+            else:
+                self.logger.info("No config file found at: " + self.config_path)
+        except Exception as e:
+            self.logger.error(f"Error loading config: {str(e)}")
+        
+        # Fallback to environment variables
+        self.api_key = os.environ.get('KITE_API_KEY', 'your_api_key')
+        self.api_secret = os.environ.get('KITE_API_SECRET', 'your_api_secret')
+        self.logger.info("Using Kite API credentials from environment variables")
+    
     def _load_token(self):
         """Load access token from file if it exists and set it in the client"""
         try:
