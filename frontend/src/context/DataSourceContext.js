@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 
 export const DataSourceContext = createContext();
@@ -120,6 +120,47 @@ export const DataSourceProvider = ({ children }) => {
     // If past trading hours and we're using Kite, we should verify
     return dataProvider === 'kite' && isPastTradingHours;
   };
+  
+  // Handle messages from popup window
+  const handleAuthMessage = useCallback(async (event) => {
+    console.log('Received message from popup:', event.data);
+    
+    if (!event.data || typeof event.data !== 'object') return;
+    
+    if (event.data.status === 'success' && event.data.provider === 'kite') {
+      console.log('Authentication successful, updating state...');
+      
+      // Set as Kite provider and update token status
+      setDataProvider('kite');
+      setTokenValid(true);
+      setRequiresAuth(false);
+      setError(null);
+      
+      // Verify token to ensure everything is properly set up
+      await checkKiteToken(true);
+    } else if (event.data.status === 'failed' || event.data.status === 'error') {
+      console.error('Authentication failed:', event.data.reason);
+      setError(`Authentication failed: ${event.data.reason || 'Unknown error'}`);
+      
+      // Keep existing provider, but update token status if provider is Kite
+      if (dataProvider === 'kite') {
+        setTokenValid(false);
+        setRequiresAuth(true);
+      }
+    }
+  }, [dataProvider, checkKiteToken]);
+  
+  // Set up event listener for popup messages
+  useEffect(() => {
+    console.log('Setting up message event listener for auth popup');
+    window.addEventListener('message', handleAuthMessage);
+    
+    // Clean up
+    return () => {
+      console.log('Removing message event listener');
+      window.removeEventListener('message', handleAuthMessage);
+    };
+  }, [handleAuthMessage]);
   
   // Initiate Kite authentication
   const initiateKiteAuth = async () => {

@@ -115,7 +115,19 @@ def kite_callback():
         
         if not request_token:
             logger.error("No request token in callback")
-            return redirect("/#auth-failed?reason=no-token")
+            return Response("""
+            <html>
+            <head><title>Authentication Failed</title></head>
+            <body>
+                <h2>Authentication Failed</h2>
+                <p>No request token received.</p>
+                <script>
+                    window.opener.postMessage({"status": "failed", "reason": "no-token"}, '*');
+                    setTimeout(function() { window.close(); }, 2000);
+                </script>
+            </body>
+            </html>
+            """, mimetype='text/html')
         
         logger.info(f"Received request token: {request_token[:5] if request_token else ''}...")
         
@@ -127,15 +139,52 @@ def kite_callback():
         
         if success:
             logger.info("Kite authentication successful")
-            # Redirect to frontend with success
-            return redirect("/#auth-success")
+            # Return HTML with JavaScript to communicate with parent window and close
+            return Response("""
+            <html>
+            <head><title>Authentication Successful</title></head>
+            <body>
+                <h2>Authentication Successful</h2>
+                <p>You have successfully authenticated with Kite.</p>
+                <p>This window will close automatically.</p>
+                <script>
+                    window.opener.postMessage({"status": "success", "provider": "kite"}, '*');
+                    setTimeout(function() { window.close(); }, 1500);
+                </script>
+            </body>
+            </html>
+            """, mimetype='text/html')
         else:
             logger.error("Kite authentication failed")
-            # Redirect to frontend with error
-            return redirect("/#auth-failed?reason=auth-error")
+            # Return HTML with JavaScript to communicate failure and close
+            return Response("""
+            <html>
+            <head><title>Authentication Failed</title></head>
+            <body>
+                <h2>Authentication Failed</h2>
+                <p>Failed to authenticate with Kite.</p>
+                <script>
+                    window.opener.postMessage({"status": "failed", "reason": "auth-error"}, '*');
+                    setTimeout(function() { window.close(); }, 2000);
+                </script>
+            </body>
+            </html>
+            """, mimetype='text/html')
     except Exception as e:
         logger.error(f"Error in Kite callback: {str(e)}")
-        return redirect(f"/#auth-error?reason={str(e)}")
+        return Response(f"""
+        <html>
+        <head><title>Authentication Error</title></head>
+        <body>
+            <h2>Authentication Error</h2>
+            <p>An error occurred during authentication: {str(e)}</p>
+            <script>
+                window.opener.postMessage({"status": "error", "reason": "Error: " + '{str(e)}'.replace(/'/g, "'").replace(/"/g, "'")}, '*');
+                setTimeout(function() { window.close(); }, 2000);
+            </script>
+        </body>
+        </html>
+        """, mimetype='text/html')
 
 
 @app.route('/api/kite/verify-token', methods=['GET'])
