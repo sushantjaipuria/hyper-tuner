@@ -14,7 +14,8 @@ ROOT_DIR = Path(__file__).parent
 
 # Kite API configuration
 DEFAULT_KITE_USER = "sushant"  # Default user
-KITE_CONFIG_FILE_TEMPLATE = ROOT_DIR / "kite_config_{user_id}.json"
+# Template as string for proper formatting
+KITE_CONFIG_FILE_TEMPLATE = "kite_config_{user_id}.json"
 LEGACY_KITE_CONFIG_FILE = ROOT_DIR / "kite_config.json"  # For backward compatibility
 DEFAULT_KITE_CONFIG = {
     "api_key": "",
@@ -25,7 +26,9 @@ DEFAULT_KITE_CONFIG = {
 
 def get_kite_config_path(user_id=DEFAULT_KITE_USER):
     """Get the path to the Kite configuration file for a specific user"""
-    return KITE_CONFIG_FILE_TEMPLATE.format(user_id=user_id)
+    # Format the string template first, then construct the path
+    config_filename = KITE_CONFIG_FILE_TEMPLATE.format(user_id=user_id)
+    return ROOT_DIR / config_filename
 
 def load_kite_config(user_id=DEFAULT_KITE_USER):
     """Load Kite API configuration for a specific user"""
