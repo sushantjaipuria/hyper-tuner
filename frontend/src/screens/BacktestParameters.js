@@ -1,8 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { DataSourceContext } from '../context/DataSourceContext';
+import KiteTokenExpiredModal from '../components/KiteTokenExpiredModal';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
 const BacktestParameters = ({ backtestParams, onSubmit, loading }) => {
+  const { dataProvider, checkKiteToken, shouldVerifyToken } = useContext(DataSourceContext);
+  const [showTokenExpiredModal, setShowTokenExpiredModal] = useState(false);
+  
+  // Check Kite token validity when required
+  useEffect(() => {
+    const verifyKiteToken = async () => {
+      if (dataProvider === 'kite' && shouldVerifyToken()) {
+        console.log('Verifying Kite token on BacktestParameters component');
+        const isValid = await checkKiteToken(true);
+        
+        if (!isValid) {
+          console.log('Kite token is invalid, showing expired modal');
+          setShowTokenExpiredModal(true);
+        }
+      }
+    };
+    
+    verifyKiteToken();
+  }, [dataProvider, checkKiteToken, shouldVerifyToken]);
   const [initialCapital, setInitialCapital] = useState(
     backtestParams.initial_capital || 100000
   );
@@ -60,6 +81,12 @@ const BacktestParameters = ({ backtestParams, onSubmit, loading }) => {
   };
   
   return (
+    <>
+      {/* Kite Token Expired Modal */}
+      <KiteTokenExpiredModal
+        isOpen={showTokenExpiredModal}
+        onClose={() => setShowTokenExpiredModal(false)}
+      />
     <div>
       <h2 className="text-2xl font-semibold mb-4">Backtest Parameters</h2>
       
@@ -164,6 +191,7 @@ const BacktestParameters = ({ backtestParams, onSubmit, loading }) => {
         </div>
       </form>
     </div>
+  </>
   );
 };
 

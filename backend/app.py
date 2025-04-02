@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify, Response, redirect
 from flask_cors import CORS
 import json
 import logging
@@ -6,6 +6,7 @@ import numpy as np
 import csv
 import io
 from datetime import datetime
+from config import load_kite_config, save_kite_config, update_kite_access_token
 
 # Import custom modules
 from strategy_manager import StrategyManager
@@ -42,6 +43,132 @@ def health_check():
         "timestamp": datetime.now().isoformat(),
         "data_provider": provider_factory.get_provider_name()
     })
+
+
+@app.route('/api/data-provider', methods=['GET'])
+def get_data_provider():
+    """Get the current data provider information"""
+    return jsonify({
+        "success": True,
+        "provider": provider_factory.get_provider_name(),
+        "timestamp": datetime.now().isoformat()
+    })
+
+
+@app.route('/api/set-data-provider', methods=['POST'])
+def set_data_provider():
+    """Set the data provider"""
+    try:
+        data = request.json
+        provider_name = data.get('provider')
+        
+        if not provider_name:
+            logger.error("Missing provider name in request")
+            return jsonify({"success": False, "error": "Missing provider name"}), 400
+        
+        logger.info(f"Setting data provider to: {provider_name}")
+        
+        # Force the specified provider
+        data_provider = provider_factory.get_provider(force_provider=provider_name)
+        
+        # For Kite provider, check if authentication is required
+        requires_auth = False
+        if provider_name.lower() == 'kite':
+            logger.info("Checking if Kite authentication is required")
+            token_valid = data_provider.verify_token()
+            requires_auth = not token_valid
+            logger.info(f"Kite token valid: {token_valid}, requires auth: {requires_auth}")
+        
+        # Return the provider info
+        return jsonify({
+            "success": True,
+            "provider": provider_factory.get_provider_name(),
+            "requires_auth": requires_auth
+        })
+    except Exception as e:
+        logger.error(f"Error setting data provider: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/kite/login-url', methods=['GET'])
+def get_kite_login_url():
+    """Get the Kite login URL"""
+    try:
+        # Get Kite provider
+        kite_provider = provider_factory.get_provider(force_provider='kite')
+        
+        # Generate login URL
+        login_url = kite_provider.get_login_url()
+        logger.info(f"Generated Kite login URL: {login_url}")
+        return jsonify({"success": True, "login_url": login_url})
+    except Exception as e:
+        logger.error(f"Error getting Kite login URL: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/kite/callback', methods=['GET'])
+def kite_callback():
+    """Handle Kite API callback after authentication"""
+    try:
+        # Get request token from query params
+        request_token = request.args.get('request_token')
+        
+        if not request_token:
+            logger.error("No request token in callback")
+            return redirect("/#auth-failed?reason=no-token")
+        
+        logger.info(f"Received request token: {request_token[:5] if request_token else ''}...")
+        
+        # Get Kite provider
+        kite_provider = provider_factory.get_provider(force_provider='kite')
+        
+        # Authenticate with the request token
+        success = kite_provider.authenticate(request_token)
+        
+        if success:
+            logger.info("Kite authentication successful")
+            # Redirect to frontend with success
+            return redirect("/#auth-success")
+        else:
+            logger.error("Kite authentication failed")
+            # Redirect to frontend with error
+            return redirect("/#auth-failed?reason=auth-error")
+    except Exception as e:
+        logger.error(f"Error in Kite callback: {str(e)}")
+        return redirect(f"/#auth-error?reason={str(e)}")
+
+
+@app.route('/api/kite/verify-token', methods=['GET'])
+def verify_kite_token():
+    """Verify if the Kite API token is valid"""
+    try:
+        # Get Kite provider
+        kite_provider = provider_factory.get_provider(force_provider='kite')
+        
+        # Verify token
+        valid = kite_provider.verify_token()
+        logger.info(f"Kite token validation result: {valid}")
+        return jsonify({"success": True, "valid": valid})
+    except Exception as e:
+        logger.error(f"Error verifying Kite token: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/kite/logout', methods=['POST'])
+def kite_logout():
+    """Invalidate Kite API token"""
+    try:
+        logger.info("Logging out from Kite API")
+        # Update the Kite config to remove the token
+        config = load_kite_config()
+        config["access_token"] = ""
+        config["token_timestamp"] = ""
+        save_kite_config(config)
+        
+        return jsonify({"success": True, "message": "Successfully logged out from Kite"})
+    except Exception as e:
+        logger.error(f"Error logging out from Kite: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @app.route('/api/save-strategy', methods=['POST'])

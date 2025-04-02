@@ -1,4 +1,3 @@
-
 import logging
 from datetime import datetime, timedelta
 from kite_integration import KiteIntegration
@@ -29,6 +28,7 @@ class DataProviderFactory:
         
         # If forcing a specific provider
         if force_provider is not None:
+            self.logger.info(f"Forcing data provider: {force_provider}")
             if force_provider.lower() == 'kite':
                 self._provider = KiteIntegration()
                 self._provider_name = 'kite'
@@ -40,109 +40,49 @@ class DataProviderFactory:
                 self.logger.info("Using Yahoo Finance data provider (forced)")
                 return self._provider
             else:
-                self.logger.warning(f"Unknown provider: {force_provider}, falling back to auto-selection")
+                self.logger.warning(f"Unknown provider: {force_provider}, falling back to default (Yahoo Finance)")
         
-        # Try Kite first
-        kite = KiteIntegration()
-        
-        # If using placeholders, switch to Yahoo Finance
-        if kite.is_using_placeholders():
-            self.logger.info("Detected Kite API placeholder credentials, using Yahoo Finance")
-            try:
-                yahoo = YahooFinanceIntegration()
-                # Verify Yahoo Finance is working by getting some test data
-                test_data = yahoo.get_historical_data("NIFTY 50", "1day", 
-                                                  (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d"), 
-                                                  datetime.now().strftime("%Y-%m-%d"))
-                if test_data is not None and not test_data.empty:
-                    self.logger.info("Successfully connected to Yahoo Finance")
-                    self._provider = yahoo
-                    self._provider_name = 'yahoo'
-                    return self._provider
-                else:
-                    self.logger.warning("Yahoo Finance returned empty data, will try Kite anyway")
-            except Exception as e:
-                self.logger.warning(f"Error initializing Yahoo Finance: {str(e)}")
-                self.logger.warning("Will try Kite API even with placeholder credentials")
-        
-        # Try authenticating with Kite
-        try:
-            if kite.authenticate():
-                self.logger.info("Successfully authenticated with Kite API")
-                self._provider = kite
-                self._provider_name = 'kite'
-                return self._provider
-        except Exception as e:
-            self.logger.warning(f"Failed to authenticate with Kite API: {str(e)}")
-        
-        # Fall back to Yahoo Finance with better error handling
-        self.logger.info("Falling back to Yahoo Finance data provider")
-        try:
-            yahoo = YahooFinanceIntegration()
-            # Test connection with a US symbol first (more reliable)
-            self.logger.info("Testing Yahoo Finance connection with a US symbol...")
-            try:
-                # SPY is a widely traded ETF that should be available
-                test_data = yahoo.get_historical_data("SPY", "1day", 
-                                                  (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d"), 
-                                                  datetime.now().strftime("%Y-%m-%d"))
-                if test_data is not None and not test_data.empty:
-                    self.logger.info("Successfully connected to Yahoo Finance with US symbol")
-                    self._provider = yahoo
-                    self._provider_name = 'yahoo'
-                    return self._provider
-            except Exception as e:
-                self.logger.warning(f"Failed to get US symbol data from Yahoo Finance: {str(e)}")
-            
-            # Try with an Indian symbol
-            self.logger.info("Testing Yahoo Finance connection with an Indian symbol...")
-            try:
-                test_data = yahoo.get_historical_data("NIFTY 50", "1day", 
-                                                  (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d"), 
-                                                  datetime.now().strftime("%Y-%m-%d"))
-                if test_data is not None and not test_data.empty:
-                    self.logger.info("Successfully connected to Yahoo Finance with Indian symbol")
-                    self._provider = yahoo
-                    self._provider_name = 'yahoo'
-                    return self._provider
-                else:
-                    self.logger.warning("Yahoo Finance returned empty data for Indian symbol")
-            except Exception as e:
-                self.logger.warning(f"Failed to get Indian symbol data from Yahoo Finance: {str(e)}")
-                
-            # Last resort: try with RELIANCE which is a major Indian stock
-            self.logger.info("Trying one more time with RELIANCE stock...")
-            try:
-                test_data = yahoo.get_historical_data("RELIANCE", "1day", 
-                                                  (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d"), 
-                                                  datetime.now().strftime("%Y-%m-%d"))
-                if test_data is not None and not test_data.empty:
-                    self.logger.info("Successfully connected to Yahoo Finance with RELIANCE")
-                    self._provider = yahoo
-                    self._provider_name = 'yahoo'
-                    return self._provider
-                else:
-                    raise ValueError("Yahoo Finance returned empty data for all test symbols")
-            except Exception as e:
-                self.logger.error(f"Final test failed: {str(e)}")
-                raise
-                
-        except Exception as e:
-            import traceback
-            self.logger.error(f"Failed to initialize Yahoo Finance: {str(e)}")
-            self.logger.debug(f"Error traceback: {traceback.format_exc()}")
-            self.logger.error("Both data providers failed. The application may not work correctly.")
-            # As a last resort, still return Yahoo but log the error
-            self.logger.warning("Using Yahoo Finance provider despite initialization failure")
-            self._provider = YahooFinanceIntegration()
-            self._provider_name = 'yahoo'
-            return self._provider
+        # Default to Yahoo Finance as per requirements
+        self.logger.info("Using Yahoo Finance as default data provider")
+        self._provider = YahooFinanceIntegration()
+        self._provider_name = 'yahoo'
+        return self._provider
     
     def get_provider_name(self):
         """Get the name of the current provider"""
         if self._provider_name is None:
             self.get_provider()  # This will set the provider name
         return self._provider_name
+    
+    def test_provider(self, provider_name):
+        """
+        Test if a specific provider works
+        
+        Args:
+            provider_name (str): Provider to test ('kite' or 'yahoo')
+            
+        Returns:
+            bool: True if the provider works, False otherwise
+        """
+        try:
+            if provider_name.lower() == 'kite':
+                provider = KiteIntegration()
+                return provider.verify_token()
+            elif provider_name.lower() == 'yahoo':
+                provider = YahooFinanceIntegration()
+                # Test with a commonly available symbol
+                test_data = provider.get_historical_data(
+                    "SPY", "1day", 
+                    (datetime.now() - timedelta(days=5)).strftime("%Y-%m-%d"), 
+                    datetime.now().strftime("%Y-%m-%d")
+                )
+                return test_data is not None and not test_data.empty
+            else:
+                self.logger.warning(f"Unknown provider for testing: {provider_name}")
+                return False
+        except Exception as e:
+            self.logger.error(f"Error testing provider {provider_name}: {str(e)}")
+            return False
 
 # Create a singleton instance
 provider_factory = DataProviderFactory()

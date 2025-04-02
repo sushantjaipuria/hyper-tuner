@@ -1,9 +1,9 @@
-
 import pandas as pd
 import logging
 from kiteconnect import KiteConnect
 from datetime import datetime, timedelta
 from data_provider import DataProvider
+from config import load_kite_config, save_kite_config, update_kite_access_token
 
 class KiteIntegration(DataProvider):
     """Class to handle integration with Zerodha Kite API, implementing the DataProvider interface"""
@@ -11,37 +11,62 @@ class KiteIntegration(DataProvider):
     def __init__(self):
         """Initialize the Kite API integration"""
         super().__init__()
+        self.logger = logging.getLogger(__name__)
         
-        # Placeholder for API key and secret - replace with your own values
-        self.api_key = "your_api_key"
-        self.api_secret = "your_api_secret"
+        # Load configuration from file
+        self.config = load_kite_config()
+        self.api_key = self.config.get("api_key", "")
+        self.api_secret = self.config.get("api_secret", "")
+        self.access_token = self.config.get("access_token", "")
         
         # Initialize KiteConnect client (not authenticated yet)
         self.kite = KiteConnect(api_key=self.api_key)
         
-        # Placeholder for access token
-        self.access_token = None
-        
+        # Set access token if available
+        if self.access_token:
+            self.logger.info("Setting access token from configuration")
+            try:
+                self.kite.set_access_token(self.access_token)
+            except Exception as e:
+                self.logger.error(f"Failed to set access token: {str(e)}")
+    
     def authenticate(self, request_token=None):
         """Authenticate with the Kite API using request token or stored access token"""
         try:
             if request_token:
                 # Generate access token using request token
+                self.logger.info(f"Authenticating with request token: {request_token[:5] if request_token else ''}...")
                 data = self.kite.generate_session(request_token, self.api_secret)
                 self.access_token = data["access_token"]
                 self.kite.set_access_token(self.access_token)
-                self.logger.info("Authentication successful with new request token")
+                
+                # Save access token to configuration
+                self.logger.info("Saving new access token to configuration")
+                update_kite_access_token(self.access_token)
+                
                 return True
             elif self.access_token:
                 # Use stored access token
+                self.logger.info(f"Using stored access token: {self.access_token[:5] if self.access_token else ''}...")
                 self.kite.set_access_token(self.access_token)
-                self.logger.info("Using stored access token")
                 return True
             else:
                 self.logger.error("No request token or access token available")
                 return False
         except Exception as e:
             self.logger.error(f"Authentication failed: {str(e)}")
+            return False
+    
+    def verify_token(self):
+        """Verify if the access token is valid by making a lightweight API call"""
+        try:
+            self.logger.info("Verifying Kite API token validity")
+            # Get user profile - lightweight API call
+            user_profile = self.kite.profile()
+            self.logger.info(f"Token verified successfully. User: {user_profile.get('user_name', 'Unknown')}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Token verification failed: {str(e)}")
             return False
     
     def get_login_url(self):
@@ -178,12 +203,11 @@ class KiteIntegration(DataProvider):
 
     def is_using_placeholders(self):
         """Check if using placeholder credentials"""
-        return self.api_key == "your_api_key" or self.api_secret == "your_api_secret"
+        return not self.api_key or not self.api_secret or self.api_key == "your_api_key" or self.api_secret == "your_api_secret"
 
 # Example usage:
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     kite = KiteIntegration()
-    # Note: This won't work until you authenticate with a request token
-    # print(kite.get_login_url())
     print(f"Using placeholders: {kite.is_using_placeholders()}")
-
+    print(f"Login URL: {kite.get_login_url()}")

@@ -155,11 +155,35 @@ const api = {
   
   // Get data provider info
   getDataProviderInfo: async () => {
-    const response = await axios.get(`${API_URL}/health`);
+    const response = await axios.get(`${API_URL}/data-provider`);
     return {
-      provider: response.data.data_provider,
+      provider: response.data.provider,
       timestamp: response.data.timestamp
     };
+  },
+  
+  // Set data provider
+  setDataProvider: async (provider) => {
+    const response = await axios.post(`${API_URL}/set-data-provider`, { provider });
+    return response.data;
+  },
+  
+  // Get Kite login URL
+  getKiteLoginUrl: async () => {
+    const response = await axios.get(`${API_URL}/kite/login-url`);
+    return response.data;
+  },
+  
+  // Verify Kite token
+  verifyKiteToken: async () => {
+    const response = await axios.get(`${API_URL}/kite/verify-token`);
+    return response.data;
+  },
+  
+  // Kite logout
+  kiteLogout: async () => {
+    const response = await axios.post(`${API_URL}/kite/logout`);
+    return response.data;
   },
   
   // Get available technical indicators

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Authentication Callback</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin-top: 100px;
+      background-color: #f0f4f8;
+      color: #333;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 30px;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    .success {
+      color: #2e7d32;
+    }
+    .error {
+      color: #d32f2f;
+    }
+    .spinner {
+      display: inline-block;
+      width: 50px;
+      height: 50px;
+      border: 5px solid rgba(0, 0, 0, 0.1);
+      border-radius: 50%;
+      border-top-color: #3b82f6;
+      animation: spin 1s ease-in-out infinite;
+      margin-bottom: 20px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="status-message">
+      <div class="spinner"></div>
+      <h2>Processing Authentication</h2>
+      <p>Please wait while we complete the authentication process...</p>
+    </div>
+  </div>
+
+  <script>
+    // Extract query parameters
+    const params = new URLSearchParams(window.location.search);
+    const requestToken = params.get('request_token');
+    const status = params.get('status');
+    
+    // Function to show status
+    function showStatus(success, message) {
+      const statusElement = document.getElementById('status-message');
+      
+      if (success) {
+        statusElement.innerHTML = `
+          <h2 class="success">Authentication Successful</h2>
+          <p>${message}</p>
+          <p>You can close this window and return to the application.</p>
+        `;
+        
+        // Notify parent window if available
+        if (window.opener) {
+          window.opener.postMessage({ type: 'kite-auth-success' }, '*');
+          setTimeout(() => window.close(), 3000);
+        } else {
+          // Redirect to main app with success flag
+          setTimeout(() => {
+            window.location.href = '/#auth-success';
+          }, 2000);
+        }
+      } else {
+        statusElement.innerHTML = `
+          <h2 class="error">Authentication Failed</h2>
+          <p>${message}</p>
+          <p>Please try again.</p>
+        `;
+        
+        // Notify parent window if available
+        if (window.opener) {
+          window.opener.postMessage({ type: 'kite-auth-failure', error: message }, '*');
+        } else {
+          // Redirect to main app with error flag
+          setTimeout(() => {
+            window.location.href = '/#auth-failed?reason=' + encodeURIComponent(message);
+          }, 2000);
+        }
+      }
+    }
+    
+    // Forward the request token to our backend
+    function forwardTokenToBackend(token) {
+      fetch(`/api/kite/callback?request_token=${token}`)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Failed to process authentication');
+          }
+          // For redirect responses, we don't want to parse as JSON
+          if (response.redirected) {
+            return { success: true, redirectUrl: response.url };
+          }
+          return response.json();
+        })
+        .then(data => {
+          if (data.success || data.redirectUrl) {
+            showStatus(true, 'You have been successfully authenticated with Kite.');
+          } else {
+            showStatus(false, data.error || 'Authentication failed.');
+          }
+        })
+        .catch(error => {
+          showStatus(false, error.message);
+        });
+    }
+    
+    // Process the response
+    if (requestToken) {
+      // Forward the token to our backend
+      forwardTokenToBackend(requestToken);
+    } else if (status === 'success') {
+      showStatus(true, 'Authentication was successful.');
+    } else {
+      showStatus(false, 'No authentication token received.');
+    }
+  </script>
+</body>
+</html>

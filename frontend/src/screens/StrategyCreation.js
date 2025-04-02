@@ -1,8 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { DataSourceContext } from '../context/DataSourceContext';
+import KiteTokenExpiredModal from '../components/KiteTokenExpiredModal';
 import api from '../services/api';
 import { FaPlus, FaTrash } from 'react-icons/fa';
 
 const StrategyCreation = ({ strategy, onSave, loading }) => {
+  const { dataProvider, checkKiteToken, shouldVerifyToken } = useContext(DataSourceContext);
+  const [showTokenExpiredModal, setShowTokenExpiredModal] = useState(false);
+  
+  // Check Kite token validity when required
+  useEffect(() => {
+    const verifyKiteToken = async () => {
+      if (dataProvider === 'kite' && shouldVerifyToken()) {
+        console.log('Verifying Kite token on StrategyCreation component');
+        const isValid = await checkKiteToken(true);
+        
+        if (!isValid) {
+          console.log('Kite token is invalid, showing expired modal');
+          setShowTokenExpiredModal(true);
+        }
+      }
+    };
+    
+    verifyKiteToken();
+  }, [dataProvider, checkKiteToken, shouldVerifyToken]);
   const [strategyName, setStrategyName] = useState(strategy.name || '');
   const [strategyType, setStrategyType] = useState(strategy.type || 'buy');
   const [symbol, setSymbol] = useState(strategy.symbol || '');
@@ -316,6 +337,12 @@ const StrategyCreation = ({ strategy, onSave, loading }) => {
   };
   
   return (
+    <>
+      {/* Kite Token Expired Modal */}
+      <KiteTokenExpiredModal
+        isOpen={showTokenExpiredModal}
+        onClose={() => setShowTokenExpiredModal(false)}
+      />
     <div>
       <h2 className="text-2xl font-semibold mb-4">Strategy Creation</h2>
       
@@ -801,6 +828,7 @@ const StrategyCreation = ({ strategy, onSave, loading }) => {
         </div>
       </form>
     </div>
+  </>
   );
 };
 
