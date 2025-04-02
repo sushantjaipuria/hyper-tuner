@@ -1,9 +1,11 @@
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify, Response, redirect
 from flask_cors import CORS
 import json
 import logging
 import numpy as np
 import csv
+import time
+import traceback
 import io
 from datetime import datetime
 
@@ -13,6 +15,7 @@ from backtest_engine import BacktestEngine
 from optimizer import Optimizer
 from data_provider_factory import provider_factory
 from indicators import Indicators
+from kite_integration import KiteIntegration, KiteAuthError
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -576,6 +579,156 @@ def save_optimized_strategy():
         import traceback
         logger.error(traceback.format_exc())
         return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/kite/auth', methods=['GET'])
+def kite_auth():
+    """Generate and return Kite login URL with debugging options"""
+    try:
+        logger.info("Kite auth request received")
+        
+        # Create a Kite integration instance
+        kite_provider = None
+        try:
+            kite_provider = provider_factory.get_provider(force_provider='kite')
+        except Exception as e:
+            logger.error(f"Error creating Kite provider: {str(e)}")
+            return jsonify({
+                "success": False, 
+                "error": "Failed to initialize Kite provider",
+                "details": str(e)
+            }), 500
+        
+        # Check if already authenticated
+        try:
+            is_authenticated = kite_provider.check_token_validity()
+            if is_authenticated:
+                logger.info("Already authenticated with Kite")
+                return jsonify({
+                    "success": True, 
+                    "authenticated": True, 
+                    "message": "Already authenticated with Kite"
+                })
+        except Exception as e:
+            logger.warning(f"Token validation error: {str(e)}")
+            # Continue to generate login URL if validation fails
+        
+        # Generate login URL
+        try:
+            login_url = kite_provider.get_login_url()
+            logger.info(f"Generated Kite login URL: {login_url}")
+            
+            return jsonify({
+                "success": True, 
+                "authenticated": False, 
+                "login_url": login_url
+            })
+        except Exception as e:
+            logger.error(f"Error generating login URL: {str(e)}")
+            return jsonify({
+                "success": False, 
+                "error": "Failed to generate login URL",
+                "details": str(e)
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"Unexpected error in kite_auth: {str(e)}")
+        logger.debug(traceback.format_exc())  # Log full traceback in debug mode
+        return jsonify({
+            "success": False, 
+            "error": "Internal server error",
+            "details": str(e)
+        }), 500
+
+@app.route('/api/kite/callback', methods=['GET'])
+def kite_callback():
+    """Handle callback from Kite with request token and detailed error handling"""
+    # Generate a trace ID for tracking this request in logs
+    trace_id = f"kite-callback-{int(time.time())}"
+    logger.info(f"[{trace_id}] Kite callback received")
+    
+    try:
+        # Get request token from query parameters
+        request_token = request.args.get('request_token')
+        
+        if not request_token:
+            logger.error(f"[{trace_id}] No request token received in callback")
+            return handle_callback_error(trace_id, "No request token received")
+        
+        logger.info(f"[{trace_id}] Received request token: {request_token[:5]}...")
+        
+        # Get redirect URI from query parameters or use default
+        frontend_url = request.args.get('redirect_uri', 'http://localhost:3000')
+        logger.info(f"[{trace_id}] Redirect URI: {frontend_url}")
+        
+        # Authenticate with the request token
+        try:
+            kite_provider = provider_factory.get_provider(force_provider='kite')
+            auth_success = kite_provider.authenticate(request_token)
+            
+            if auth_success:
+                logger.info(f"[{trace_id}] Successfully authenticated with Kite")
+                redirect_url = f"{frontend_url}?auth_status=success&trace_id={trace_id}"
+                return redirect(redirect_url)
+            else:
+                logger.error(f"[{trace_id}] Failed to authenticate with request token")
+                return handle_callback_error(trace_id, "Authentication failed", frontend_url)
+                
+        except KiteAuthError as e:
+            logger.error(f"[{trace_id}] Kite authentication error: {str(e)}")
+            return handle_callback_error(trace_id, f"Authentication error: {str(e)}", frontend_url)
+            
+        except Exception as e:
+            logger.error(f"[{trace_id}] Error authenticating: {str(e)}")
+            return handle_callback_error(trace_id, f"Authentication error: {str(e)}", frontend_url)
+            
+    except Exception as e:
+        logger.error(f"[{trace_id}] Unexpected error in callback: {str(e)}")
+        logger.debug(traceback.format_exc())
+        return handle_callback_error(trace_id, f"Server error: {str(e)}")
+
+def handle_callback_error(trace_id, error_msg, frontend_url='http://localhost:3000'):
+    """Helper function to handle errors in the callback and redirect to frontend"""
+    error_url = f"{frontend_url}?auth_status=failed&error={error_msg}&trace_id={trace_id}"
+    logger.debug(f"[{trace_id}] Redirecting to error URL: {error_url}")
+    return redirect(error_url)
+
+@app.route('/api/kite/status', methods=['GET'])
+def kite_status():
+    """Check if authenticated with Kite by making a lightweight API call"""
+    logger.info("Kite status check requested")
+    
+    try:
+        # Get Kite provider
+        kite_provider = provider_factory.get_provider(force_provider='kite')
+        
+        # Check token validity with API call
+        is_authenticated = kite_provider.check_token_validity()
+        
+        if is_authenticated:
+            logger.info("Kite status check: Valid authentication")
+            return jsonify({
+                "success": True, 
+                "authenticated": True,
+                "provider": "kite",
+                "timestamp": datetime.now().isoformat()
+            })
+        else:
+            logger.info("Kite status check: Not authenticated")
+            return jsonify({
+                "success": True, 
+                "authenticated": False,
+                "provider": "kite",
+                "timestamp": datetime.now().isoformat(),
+                "message": "Kite authentication required"
+            })
+    except Exception as e:
+        logger.error(f"Error checking Kite status: {str(e)}")
+        return jsonify({
+            "success": False, 
+            "authenticated": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }), 500
 
 @app.route('/api/export-optimization-csv/<optimization_id>', methods=['GET'])
 def export_optimization_csv(optimization_id):

@@ -177,6 +177,83 @@ const api = {
   },
   
   // Save optimized strategy
+  // Kite authentication
+  kiteAuthStatus: async () => {
+    try {
+      console.log('Checking Kite auth status...');
+      const response = await axios.get(`${API_URL}/kite/status`);
+      console.log('Kite auth status response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error checking Kite auth status:', error);
+      
+      // Enhanced error logging
+      if (error.response) {
+        console.error('Status:', error.response.status);
+        console.error('Response data:', error.response.data);
+      } else if (error.request) {
+        console.error('No response received:', error.request);
+      }
+      
+      return { 
+        success: false, 
+        authenticated: false, 
+        error: error.message,
+        errorType: error.response ? 'response' : error.request ? 'request' : 'setup'
+      };
+    }
+  },
+
+  kiteAuth: async () => {
+    try {
+      console.log('Initiating Kite auth...');
+      const response = await axios.get(`${API_URL}/kite/auth`);
+      console.log('Kite auth response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error initiating Kite auth:', error);
+      
+      // Enhanced error logging
+      if (error.response) {
+        console.error('Status:', error.response.status);
+        console.error('Response data:', error.response.data);
+      } else if (error.request) {
+        console.error('No response received:', error.request);
+      }
+      
+      return { 
+        success: false, 
+        error: error.message,
+        errorType: error.response ? 'response' : error.request ? 'request' : 'setup',
+        errorDetails: error.response ? error.response.data : null
+      };
+    }
+  },
+
+  // Helper method to handle API errors related to authentication
+  handleApiAuthError: (error) => {
+    console.error('API authentication error:', error);
+    
+    // Check if this is an authentication error
+    const isAuthError = error.response && 
+      (error.response.status === 401 || error.response.status === 403 ||
+       (error.response.data && error.response.data.error && 
+        (error.response.data.error.toLowerCase().includes('authentication') ||
+         error.response.data.error.toLowerCase().includes('token') ||
+         error.response.data.error.toLowerCase().includes('login'))));
+         
+    if (isAuthError) {
+      console.warn('Authentication error detected, redirecting to login');
+      // Clear any stored state related to authentication
+      localStorage.removeItem('kite_auth_state');
+      // Redirect to home page to trigger re-auth
+      window.location.href = '/?auth_error=true';
+      return true; // Error was handled
+    }
+    
+    return false; // Error wasn't an auth error
+  },
+  
   saveOptimizedStrategy: async (data) => {
     try {
       console.log('Calling save-optimized-strategy API with data:', data);
