@@ -506,9 +506,22 @@ def run_backtest():
         try:
             logger.info(f"Running backtest for strategy {strategy_id} from {start_date} to {end_date}")
             logger.debug(f"Strategy: {strategy}")
-            logger.debug(f"Using data provider: {type(data_provider).__name__}")
             
-            backtest_results = backtest_engine.run_backtest(
+            # Get the current data provider from the factory - this ensures we use the most recently selected provider
+            current_data_provider = provider_factory.get_provider()
+            current_provider_name = provider_factory.get_provider_name()
+            logger.info(f"Using current data provider: {current_provider_name}")
+            
+            # Debug output for provider verification
+            if hasattr(current_data_provider, '__class__'):
+                logger.info(f"Data provider class: {current_data_provider.__class__.__name__}")
+            provider_type = type(current_data_provider).__name__
+            logger.info(f"Data provider type: {provider_type}")
+            
+            # Create a new backtest engine with the current provider
+            current_backtest_engine = BacktestEngine(current_data_provider)
+            
+            backtest_results = current_backtest_engine.run_backtest(
                 strategy, 
                 start_date, 
                 end_date, 
@@ -518,7 +531,7 @@ def run_backtest():
             # Save backtest results
             strategy_manager.save_backtest_results(strategy_id, backtest_results)
             
-            logger.info(f"Backtest completed successfully for strategy {strategy_id}")
+            logger.info(f"Backtest completed successfully for strategy {strategy_id} using {current_provider_name} provider")
             return jsonify({
                 "success": True, 
                 "backtest_id": backtest_results["backtest_id"],
@@ -582,9 +595,24 @@ def run_optimization():
             logger.error(f"Error retrieving strategy or backtest data: {str(e)}")
             return jsonify({"success": False, "error": f"Failed to retrieve data: {str(e)}"}), 400
         
+        # Get the current data provider and create a fresh backtest engine
+        current_data_provider = provider_factory.get_provider()
+        current_provider_name = provider_factory.get_provider_name()
+        logger.info(f"Using current data provider for optimization: {current_provider_name}")
+        
+        # Debug output for provider verification
+        if hasattr(current_data_provider, '__class__'):
+            logger.info(f"Data provider class: {current_data_provider.__class__.__name__}")
+        provider_type = type(current_data_provider).__name__
+        logger.info(f"Data provider type: {provider_type}")
+        current_backtest_engine = BacktestEngine(current_data_provider)
+        
+        # Create an optimizer with the current backtest engine
+        current_optimizer = Optimizer(current_backtest_engine)
+        
         # Start the optimization process (which now runs in background)
-        logger.info(f"Starting optimization for strategy {strategy_id}")
-        optimization_results = optimizer.optimize_strategy(
+        logger.info(f"Starting optimization for strategy {strategy_id} using {current_provider_name} provider")
+        optimization_results = current_optimizer.optimize_strategy(
             strategy, 
             original_backtest
         )
@@ -595,6 +623,9 @@ def run_optimization():
         
         # Save initial optimization results
         strategy_manager.save_optimization_results(strategy_id, optimization_results)
+        
+        # Add the optimization to the global optimizer's tracking to ensure proper status endpoint functionality
+        optimizer.optimizations[optimization_id] = current_optimizer.optimizations[optimization_id]
         
         return jsonify({
             "success": True, 
