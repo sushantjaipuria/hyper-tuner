@@ -172,6 +172,9 @@ def kite_callback():
             """, mimetype='text/html')
     except Exception as e:
         logger.error(f"Error in Kite callback: {str(e)}")
+        # Safely escape the error message for JavaScript
+        error_msg = str(e).replace("'", "\\'").replace('"', '\\"')
+        
         return Response(f"""
         <html>
         <head><title>Authentication Error</title></head>
@@ -179,8 +182,8 @@ def kite_callback():
             <h2>Authentication Error</h2>
             <p>An error occurred during authentication: {str(e)}</p>
             <script>
-                window.opener.postMessage({"status": "error", "reason": "Error: " + '{str(e)}'.replace(/'/g, "'").replace(/"/g, "'")}, '*');
-                setTimeout(function() { window.close(); }, 2000);
+                window.opener.postMessage({"status": "error", "reason": "Error: {error_msg}"}, '*');
+                setTimeout(function() {{ window.close(); }}, 2000);
             </script>
         </body>
         </html>
