@@ -64,7 +64,7 @@ export const DataSourceProvider = ({ children }) => {
         setLoading(true);
         
         // Fetch available Kite users
-        const users = await fetchKiteUsers();
+        const userList = await fetchKiteUsers();
         
         const info = await api.getDataProviderInfo();
         logDebug("Received data provider info:", info);
@@ -107,6 +107,7 @@ export const DataSourceProvider = ({ children }) => {
     };
 
     fetchDataProviderInfo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
   // Generate provider options for the dropdown
@@ -530,6 +531,7 @@ export const DataSourceProvider = ({ children }) => {
     } else {
       logDebug('Unrecognized message format', event.data);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dataProvider, tokenValid, requiresAuth, currentKiteUser, kiteUsers]);
   
   // Set up event listener for popup messages with detailed logging
@@ -566,6 +568,7 @@ export const DataSourceProvider = ({ children }) => {
       sessionStorage.setItem('kiteAuthListenerActive', 'false');
       window.removeEventListener('message', handleAuthMessage);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handleAuthMessage]);
   
   // Expose the debug helpers for external use
@@ -594,6 +597,7 @@ export const DataSourceProvider = ({ children }) => {
     return () => {
       delete window.kiteAuthDebug;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dataProvider, dataProviderDisplayName, tokenValid, requiresAuth, error, currentKiteUser, kiteUsers]);
   
   // Initiate Kite authentication with enhanced debugging

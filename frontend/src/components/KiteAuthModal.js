@@ -15,6 +15,18 @@ const KiteAuthModal = ({ isOpen, onClose, userId }) => {
   const [debugVisible, setDebugVisible] = useState(false);
   const [debugInfo, setDebugInfo] = useState({});
   
+  // Debug logging helper - MOVED TO TOP OF COMPONENT
+  const logModalDebug = (message, data = null) => {
+    const timestamp = new Date().toISOString();
+    console.log('%c[KiteAuthModal]', 'color: #2196f3; font-weight: bold', `[${timestamp}] ${message}`, data || '');
+    
+    // Update session storage for debugging
+    const modalLogs = JSON.parse(sessionStorage.getItem('kiteAuthModalLogs') || '[]');
+    modalLogs.push({ timestamp, message, data: data ? JSON.stringify(data) : null });
+    if (modalLogs.length > 20) modalLogs.shift();
+    sessionStorage.setItem('kiteAuthModalLogs', JSON.stringify(modalLogs));
+  };
+  
   // Get the effective user ID (from props or context)
   // Prevent the literal string 'true' from being used as a user ID
   // Add debug logging to track the userId and type
@@ -35,18 +47,6 @@ const KiteAuthModal = ({ isOpen, onClose, userId }) => {
     type: typeof effectiveUserId,
     calculation: `userId ${userId} → effectiveUserId ${effectiveUserId}`
   });
-  
-  // Debug logging helper
-  const logModalDebug = (message, data = null) => {
-    const timestamp = new Date().toISOString();
-    console.log('%c[KiteAuthModal]', 'color: #2196f3; font-weight: bold', `[${timestamp}] ${message}`, data || '');
-    
-    // Update session storage for debugging
-    const modalLogs = JSON.parse(sessionStorage.getItem('kiteAuthModalLogs') || '[]');
-    modalLogs.push({ timestamp, message, data: data ? JSON.stringify(data) : null });
-    if (modalLogs.length > 20) modalLogs.shift();
-    sessionStorage.setItem('kiteAuthModalLogs', JSON.stringify(modalLogs));
-  };
   
   // Track modal opens and closures
   useEffect(() => {
