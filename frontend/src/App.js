@@ -6,6 +6,145 @@ import { DataSourceContext, DataSourceProvider } from './context/DataSourceConte
 import KiteAuthModal from './components/KiteAuthModal';
 
 function AppContent() {
+  // Setup global debugging tools
+  useEffect(() => {
+    // Setup cross-window debugging
+    window.debugKiteAuth = {
+      windowInfo: {
+        url: window.location.href,
+        origin: window.location.origin,
+        host: window.location.host,
+        protocol: window.location.protocol
+      },
+      checkMessage: (testMessage) => {
+        console.log('%c[DEBUG] Test message received', 'background: #1e88e5; color: white; padding: 2px 6px; border-radius: 2px;', testMessage);
+        return 'Response from main window at ' + new Date().toISOString();
+      },
+      securityPolicies: {
+        crossOriginIsolated: window.crossOriginIsolated || false,
+        isSecureContext: window.isSecureContext || false
+      },
+      testPostMessage: () => {
+        const testWindow = window.open('', '_blank');
+        if (testWindow) {
+          testWindow.document.write(`
+            <html>
+              <head><title>PostMessage Test Window</title></head>
+              <body>
+                <h3>Test Window</h3>
+                <div id="log" style="font-family: monospace; margin-top: 20px;"></div>
+                <script>
+                  function log(msg) {
+                    console.log(msg);
+                    document.getElementById('log').innerHTML += '<div>' + msg + '</div>';
+                  }
+                  log("Test window opened");
+                  log("Opener exists: " + (window.opener !== null));
+                  log("Attempting to send message to parent...");
+                  
+                  try {
+                    window.opener.postMessage({
+                      type: "test", 
+                      message: "Hello from test window",
+                      time: new Date().toISOString()
+                    }, "*");
+                    log("Message sent with wildcard origin");
+                    
+                    // Try with specific origin
+                    setTimeout(() => {
+                      try {
+                        const parentOrigin = window.opener.location.origin;
+                        log("Parent origin: " + parentOrigin);
+                        window.opener.postMessage({
+                          type: "test", 
+                          message: "Hello with specific origin",
+                          time: new Date().toISOString()
+                        }, parentOrigin);
+                        log("Message sent with specific origin");
+                      } catch(e) {
+                        log("Error sending with specific origin: " + e.message);
+                      }
+                    }, 1000);
+                  } catch(e) {
+                    log("Error sending message: " + e.message);
+                  }
+                  
+                  // Listen for messages
+                  window.addEventListener('message', function(event) {
+                    log("Received message from parent: " + JSON.stringify(event.data));
+                  });
+                  
+                  // Close after delay
+                  setTimeout(() => {
+                    log("Closing window...");
+                    window.close();
+                  }, 5000);
+                </script>
+              </body>
+            </html>
+          `);
+          console.log('%c[DEBUG] Test window opened, waiting for message...', 'background: #1e88e5; color: white; padding: 2px 6px; border-radius: 2px;');
+        } else {
+          console.error('%c[DEBUG] Failed to open test window - popup blocked?', 'background: #d32f2f; color: white; padding: 2px 6px; border-radius: 2px;');
+        }
+      },
+      checkOrigins: () => {
+        return {
+          windowOrigin: window.location.origin,
+          documentDomain: document.domain,
+          codespacesDomain: window.location.hostname.includes('.github.dev'),
+          potentialPopupOrigins: [
+            window.location.origin,
+            'https://localhost:3001',
+            'http://localhost:3001',
+            window.location.origin.replace('3000', '3001'),
+            window.location.origin.replace('-3000', '-3001')
+          ]
+        };
+      },
+      debugKiteAuthModal: () => {
+        // Manually show auth modal for debugging
+        setShowAuthModal(true);
+        return 'Auth modal opened for debugging';
+      }
+    };
+    
+    // Set up listener for test messages
+    const testMessageListener = (event) => {
+      if (event.data && event.data.type === 'test') {
+        console.log('%c[DEBUG] Received test message from popup window', 'background: #1e88e5; color: white; padding: 2px 6px; border-radius: 2px;', {
+          message: event.data,
+          origin: event.origin,
+          source: event.source ? 'Window object' : 'null',
+          time: new Date().toISOString()
+        });
+        
+        // Send response back if possible
+        try {
+          if (event.source) {
+            event.source.postMessage({
+              type: 'test-response',
+              message: 'Message received by parent',
+              time: new Date().toISOString()
+            }, '*');
+            console.log('%c[DEBUG] Response sent back to test window', 'background: #43a047; color: white; padding: 2px 6px; border-radius: 2px;');
+          }
+        } catch(e) {
+          console.error('Error responding to test window:', e);
+        }
+      }
+    };
+    
+    window.addEventListener('message', testMessageListener);
+    
+    console.log('%c[GLOBAL DEBUG TOOLS AVAILABLE]', 'background:#2e7d32; color:white; padding:4px; border-radius:2px;', 
+      'Use window.debugKiteAuth to access global debugging functions');
+    
+    return () => {
+      window.removeEventListener('message', testMessageListener);
+      delete window.debugKiteAuth;
+    };
+  }, []);
   const { 
     dataProvider, 
     dataProviderDisplayName,
@@ -30,6 +169,40 @@ function AppContent() {
     }
   }, [requiresAuth, dataProvider]);
   
+  // Create debug helper for authentication diagnostics
+  useEffect(() => {
+    window.debugKiteAuthFlow = {
+      getState: () => ({
+        dataProvider,
+        dataProviderDisplayName,
+        requiresAuth,
+        showAuthModal,
+        currentKiteUser,
+        apiUrl: api.getApiUrl(),
+        windowContext: {
+          url: window.location.href,
+          hash: window.location.hash,
+          isCodespaces: window.location.hostname.includes('.github.dev')
+        }
+      }),
+      testMessageListener: () => {
+        console.log('%c[DEBUG] Testing message listener...', 'background: #f57c00; color: white; padding: 2px 6px; border-radius: 2px;');
+        window.postMessage({
+          type: 'test',
+          source: 'debugger',
+          time: new Date().toISOString()
+        }, '*');
+      },
+      forceAuthModal: (show) => {
+        setShowAuthModal(show !== false);
+      }
+    };
+    
+    return () => {
+      delete window.debugKiteAuthFlow;
+    };
+  }, [dataProvider, dataProviderDisplayName, requiresAuth, showAuthModal, currentKiteUser]);
+
   // Handle URL hash for authentication callback
   useEffect(() => {
     const handleAuthCallback = () => {

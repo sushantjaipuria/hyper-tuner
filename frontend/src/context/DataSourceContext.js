@@ -15,7 +15,7 @@ export const DataSourceProvider = ({ children }) => {
   const [currentKiteUser, setCurrentKiteUser] = useState(null);
   const [kiteUsersLoaded, setKiteUsersLoaded] = useState(false);
   
-  // Log helper
+  // Log helper with enhanced debugging and colors
   const logDebug = (message, data = null) => {
     const timestamp = new Date().toISOString();
     const logMessage = `[${timestamp}] ${message}`;
@@ -24,9 +24,36 @@ export const DataSourceProvider = ({ children }) => {
     // Save to session storage for persistence
     const logs = JSON.parse(sessionStorage.getItem('kiteAuthLogs') || '[]');
     logs.push({ timestamp, message, data: data ? JSON.stringify(data) : null });
-    // Keep only last 50 logs
-    if (logs.length > 50) logs.shift();
+    // Keep only last 100 logs (increased from 50)
+    if (logs.length > 100) logs.shift();
     sessionStorage.setItem('kiteAuthLogs', JSON.stringify(logs));
+  };
+  
+  // Add a higher visibility error logger
+  const logError = (message, data = null) => {
+    const timestamp = new Date().toISOString();
+    console.error('%c[DataSourceContext ERROR]', 'color: #f44336; font-weight: bold; background: #ffebee; padding: 2px 4px; border-radius: 2px;', `[${timestamp}] ${message}`, data || '');
+    
+    // Save to session storage with error flag
+    const logs = JSON.parse(sessionStorage.getItem('kiteAuthLogs') || '[]');
+    logs.push({ timestamp, message, data: data ? JSON.stringify(data) : null, level: 'error' });
+    sessionStorage.setItem('kiteAuthLogs', JSON.stringify(logs));
+  };
+  
+  // Enhanced session storage debugging helper
+  const debugSessionStorage = (key, value) => {
+    try {
+      const data = {
+        timestamp: new Date().toISOString(),
+        value: value
+      };
+      sessionStorage.setItem(key, JSON.stringify(data));
+      logDebug(`Stored in sessionStorage: ${key}`, { value: typeof value === 'object' ? '(object)' : value });
+      return true;
+    } catch (e) {
+      logError(`Failed to store in sessionStorage: ${key}`, e.message);
+      return false;
+    }
   };
 
   // Fetch list of available Kite users
@@ -177,16 +204,26 @@ export const DataSourceProvider = ({ children }) => {
           setCurrentKiteUser(null);
         }
         
-        // Log requiresAuth state before updating
+        // Enhanced logging for requiresAuth state change
+        const requiresAuthValue = response.requires_auth;
         logDebug(`Setting requiresAuth to:`, {
-          newValue: response.requires_auth,
-          valueType: typeof response.requires_auth,
+          newValue: requiresAuthValue,
+          valueType: typeof requiresAuthValue,
           provider: response.provider,
           responseUserId: response.user_id,
           currentStateStack: new Error().stack.split('\n').slice(1, 3).join('\n')
         });
         
-        setRequiresAuth(response.requires_auth);
+        // Debug storage for state transitions
+        debugSessionStorage('lastProviderChange', {
+          timestamp: new Date().toISOString(),
+          provider: response.provider,
+          userId: response.user_id,
+          requiresAuth: requiresAuthValue,
+          currentKiteUser: currentKiteUser
+        });
+        
+        setRequiresAuth(requiresAuthValue);
         
         // If provider is Kite and authentication is required, set state
         if (provider === 'kite') {
@@ -226,6 +263,14 @@ export const DataSourceProvider = ({ children }) => {
       
       // Add to session storage debug log
       logDebug(`Checking Kite token validity (force=${force}, userId=${userId || 'default'})`);
+      debugSessionStorage('kiteTokenCheckStart', {
+        userId,
+        force,
+        currentKiteUser,
+        tokenValid,
+        requiresAuth,
+        timestamp: new Date().toISOString()
+      });
       
       // Check if we need to revalidate based on time
       const now = new Date();
@@ -247,6 +292,14 @@ export const DataSourceProvider = ({ children }) => {
       
       // Log API call performance
       logDebug(`Token verification API call completed in ${Math.round(endTime - startTime)}ms`, response);
+      
+      // Store the verification response for debugging
+      debugSessionStorage('kiteTokenVerifyResponse', {
+        response,
+        userId,
+        timestamp: new Date().toISOString(),
+        requestDuration: Math.round(endTime - startTime)
+      });
       
       if (response.success) {
         logDebug(`Token verification result: ${response.valid}`);
@@ -288,7 +341,7 @@ export const DataSourceProvider = ({ children }) => {
         return false;
       }
     } catch (err) {
-      logDebug('Error checking Kite token:', err.message);
+      logError('Error checking Kite token:', err.message);
       
       // Log error details
       const errorInfo = {
@@ -375,6 +428,16 @@ export const DataSourceProvider = ({ children }) => {
             origin: event.origin,
             time: new Date().toISOString()
           }));
+          
+          // Attempt to process the message even in the backup listener
+          if (event.data.status === 'success' && event.data.provider === 'kite') {
+            logDebug('Backup listener: Detected successful auth message, setting sessionStorage flag');
+            sessionStorage.setItem('kiteAuthBackupSuccess', JSON.stringify({
+              data: event.data,
+              timestamp: new Date().toISOString(),
+              handledBy: 'backupListener'
+            }));
+          }
         }
       } catch (e) {
         console.error('Error in global backup listener:', e);
@@ -395,9 +458,105 @@ export const DataSourceProvider = ({ children }) => {
     };
   }, []);
   
+  // Check sessionStorage for backup messages (poll)
+  useEffect(() => {
+    // Only run if using Kite provider
+    if (dataProvider !== 'kite') return;
+    
+    const checkBackupStorage = () => {
+      try {
+        // Check for backup success message
+        const backupSuccessStr = sessionStorage.getItem('kiteAuthBackupSuccess');
+        if (backupSuccessStr) {
+          const backupData = JSON.parse(backupSuccessStr);
+          logDebug('Found backup auth success message in sessionStorage', backupData);
+          
+          // Process the backup message
+          if (backupData.data && backupData.data.user_id) {
+            // Clear the backup message to prevent reprocessing
+            sessionStorage.removeItem('kiteAuthBackupSuccess');
+            
+            // Update state
+            setTokenValid(true);
+            setRequiresAuth(false);
+            setError(null);
+            
+            if (backupData.data.user_id) {
+              setCurrentKiteUser(backupData.data.user_id);
+              logDebug(`Setting current Kite user from backup message: ${backupData.data.user_id}`);
+            }
+            
+            // Force token verification just to be sure
+            checkKiteToken(backupData.data.user_id, true);
+          }
+        }
+        
+        // Also check for messages directly stored by popup
+        const directMessageStr = sessionStorage.getItem('kiteAuthMessage');
+        if (directMessageStr) {
+          logDebug('Found direct auth message in sessionStorage', JSON.parse(directMessageStr));
+          // Remove after logging to prevent duplicates
+          sessionStorage.removeItem('kiteAuthMessage');
+        }
+        
+        // Check for local fallback message
+        const localFallbackStr = sessionStorage.getItem('kiteAuthMessage_forParent');
+        if (localFallbackStr) {
+          logDebug('Found local fallback auth message', JSON.parse(localFallbackStr));
+          // Process it similar to above
+          try {
+            const fallbackData = JSON.parse(localFallbackStr);
+            sessionStorage.removeItem('kiteAuthMessage_forParent');
+            
+            if (fallbackData.status === 'success' && fallbackData.provider === 'kite') {
+              setTokenValid(true);
+              setRequiresAuth(false);
+              
+              if (fallbackData.user_id) {
+                setCurrentKiteUser(fallbackData.user_id);
+              }
+              
+              // Force token verification
+              checkKiteToken(fallbackData.user_id, true);
+              
+              logDebug('Successfully processed fallback auth message');
+            }
+          } catch (e) {
+            logError('Error processing fallback message', e.message);
+          }
+        }
+      } catch (e) {
+        logError('Error checking backup storage', e.message);
+      }
+    };
+    
+    // Check immediately and then every 2 seconds
+    checkBackupStorage();
+    const interval = setInterval(checkBackupStorage, 2000);
+    
+    return () => clearInterval(interval);
+  }, [dataProvider, currentKiteUser]);
+  
   // Handle messages from popup window with enhanced debugging
   const handleAuthMessage = useCallback(async (event) => {
-    // Log detailed message information
+    // Enhanced message logging with color
+    console.log('%c[AUTH_MESSAGE_RECEIVED]', 'background: #4a148c; color: white; padding: 2px 6px; border-radius: 2px;', {
+      hasData: !!event.data,
+      dataType: event.data ? typeof event.data : 'undefined',
+      origin: event.origin,
+      eventType: event.type,
+      source: event.source ? 'Window object' : 'null',
+      timestamp: new Date().toISOString(),
+      dataProvider: dataProvider,
+      tokenValid: tokenValid,
+      requiresAuth: requiresAuth,
+      requiresAuthType: typeof requiresAuth,
+      currentKiteUser: currentKiteUser,
+      data: event.data,
+      callStack: new Error().stack.split('\n').slice(1, 3).join('\n')
+    });
+    
+    // Log detailed info for debugging
     const messageInfo = {
       hasData: !!event.data,
       dataType: event.data ? typeof event.data : 'undefined',
@@ -414,6 +573,13 @@ export const DataSourceProvider = ({ children }) => {
     };
     
     logDebug('Received message event', messageInfo);
+    
+    // Store in session storage for cross-window debugging
+    debugSessionStorage('lastReceivedMessage', {
+      data: event.data,
+      origin: event.origin,
+      time: new Date().toISOString()
+    });
     
     // Track in session storage that we received a message
     const messageCount = parseInt(sessionStorage.getItem('kiteAuthMessageCount') || '0');
@@ -539,7 +705,7 @@ export const DataSourceProvider = ({ children }) => {
     logDebug('Setting up component message event listener for auth popup');
     
     // Check if the provider is Kite - this helps with debugging
-    logDebug('Current data provider state', { 
+    logDebug('Current data provider state before attaching listener', { 
       provider: dataProvider, 
       tokenValid, 
       requiresAuth,
@@ -554,8 +720,23 @@ export const DataSourceProvider = ({ children }) => {
     sessionStorage.setItem('kiteAuthListenerTimestamp', new Date().toISOString());
     sessionStorage.setItem('kiteAuthListenerActive', 'true');
     
-    // Add the event listener
-    window.addEventListener('message', handleAuthMessage);
+    // Create a wrapper handler with detailed logging
+    const wrappedHandler = (event) => {
+      console.log('%c[AUTH_MESSAGE_RAW]', 'background: #0277bd; color: white; padding: 2px 6px; border-radius: 2px;', {
+        hasData: !!event.data,
+        origin: event.origin,
+        time: new Date().toISOString(),
+        windowUrl: window.location.href,
+        eventType: event.type,
+        data: event.data
+      });
+      
+      // Call the actual handler
+      handleAuthMessage(event);
+    };
+    
+    // Add the event listener with wrapped handler
+    window.addEventListener('message', wrappedHandler);
     
     // Test if the listener is active
     setTimeout(() => {
@@ -566,7 +747,7 @@ export const DataSourceProvider = ({ children }) => {
     return () => {
       logDebug('Removing component message event listener');
       sessionStorage.setItem('kiteAuthListenerActive', 'false');
-      window.removeEventListener('message', handleAuthMessage);
+      window.removeEventListener('message', wrappedHandler);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handleAuthMessage]);
@@ -591,8 +772,51 @@ export const DataSourceProvider = ({ children }) => {
         listenerCount: parseInt(sessionStorage.getItem('kiteAuthListenerCount') || '0')
       }),
       clearLogs: () => sessionStorage.removeItem('kiteAuthLogs'),
-      testListener: checkListenerActive
+      testListener: checkListenerActive,
+      testMessageManual: (data) => {
+        // Allow manual testing of message handler
+        console.log('Sending test message manually:', data);
+        handleAuthMessage({
+          data: data || {
+            status: 'success',
+            provider: 'kite',
+            user_id: currentKiteUser || 'sushant',
+            timestamp: new Date().toISOString(),
+            messageId: 'manual_test_' + Date.now()
+          },
+          origin: window.location.origin,
+          source: window
+        });
+        return 'Test message sent to handler';
+      },
+      // Debug backend communication directly
+      openDebugger: () => {
+        const userId = currentKiteUser || 'sushant';
+        const debugUrl = `/api/kite/debug-auth?user_id=${userId}`;
+        window.open(debugUrl, '_blank', 'width=800,height=600');
+        return `Opened debugger for user ${userId}`;
+      },
+      checkOrigins: () => {
+        return {
+          windowOrigin: window.location.origin,
+          documentDomain: document.domain,
+          codespacesDomain: window.location.hostname.includes('.github.dev'),
+          potentialPopupOrigins: [
+            window.location.origin,
+            'https://localhost:3001',
+            'http://localhost:3001',
+            window.location.origin.replace('3000', '3001'),
+            window.location.origin.replace('-3000', '-3001')
+          ]
+        };
+      },
+      forceVerifyToken: (userId) => {
+        return checkKiteToken(userId || currentKiteUser, true);
+      }
     };
+    
+    console.log('%c[KITE DEBUG TOOLS AVAILABLE]', 'background:#2e7d32; color:white; padding:4px; border-radius:2px;', 
+      'Use window.kiteAuthDebug to access debugging functions');
     
     return () => {
       delete window.kiteAuthDebug;
@@ -636,6 +860,9 @@ export const DataSourceProvider = ({ children }) => {
       sessionStorage.setItem('kiteAuthStarted', new Date().toISOString());
       sessionStorage.removeItem('lastKiteAuthSuccess');
       sessionStorage.removeItem('lastKiteAuthFailure');
+      sessionStorage.removeItem('kiteAuthMessage');
+      sessionStorage.removeItem('kiteAuthMessage_forParent');
+      sessionStorage.removeItem('kiteAuthBackupSuccess');
       
       // Ensure the message event listener is active before proceeding
       const listenerActive = checkListenerActive();
@@ -681,12 +908,28 @@ export const DataSourceProvider = ({ children }) => {
             const lastFailure = sessionStorage.getItem('lastKiteAuthFailure');
             
             if (!lastSuccess && !lastFailure) {
-              logDebug("Popup closed without receiving auth message");
+              logDebug("Popup closed without receiving auth message - verifying token status");
               // Check token status after a delay
               setTimeout(async () => {
                 logDebug("Checking token status after popup closed");
                 const isValid = await checkKiteToken(userId || currentKiteUser, true);
                 logDebug(`Token check after popup close: ${isValid ? 'valid' : 'invalid'}`);
+                
+                // If token is valid, update the state directly
+                if (isValid && dataProvider === 'kite') {
+                  logDebug('Token valid after popup close - updating state');
+                  setTokenValid(true);
+                  setRequiresAuth(false);
+                  setError(null);
+                  
+                  // Store this state change for debugging
+                  debugSessionStorage('postPopupStateUpdate', {
+                    userId: userId || currentKiteUser,
+                    tokenValid: true,
+                    requiresAuth: false,
+                    timestamp: new Date().toISOString()
+                  });
+                }
               }, 1000);
             }
           }

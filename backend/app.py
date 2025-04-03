@@ -227,10 +227,33 @@ def kite_callback():
                         debugDiv.innerHTML += `<p>${{timestamp}}: ${{message}}</p>`;
                     }}
                     
-                    // Log window information
+                    // Enhanced window information logging
                     debug(`Window context - opener exists: ${{window.opener !== null}}`);
                     debug(`Parent window exists: ${{window.parent !== window}}`);
                     debug(`Current location: ${{window.location.href}}`);
+                    
+                    // Enhanced window relationship debugging
+                    try {{
+                        debug(`Window information: ${{JSON.stringify({{
+                            location: window.location.href,
+                            opener: window.opener !== null,
+                            openerOrigin: window.opener ? (window.opener.origin || 'inaccessible') : 'no opener',
+                            openerAlive: window.opener ? 'yes' : 'no'
+                        }})}}`);
+                        
+                        // Test if we can access opener properties
+                        if (window.opener) {{
+                            try {{
+                                debug("Testing opener access - attempting to access properties");
+                                window.opener.testPopupVariable = "test_" + Date.now();
+                                debug("Successfully wrote test variable to opener");
+                            }} catch(e) {{
+                                debug(`Error accessing opener properties: ${{e.message}}`);
+                            }}
+                        }}
+                    }} catch(e) {{
+                        debug(`Error in window relationship debug: ${{e.message}}`);
+                    }}
                     
                     // Function to manually close the window
                     function closeWindowManually() {{
@@ -255,7 +278,7 @@ def kite_callback():
                         }}
                     }}, 1000);
                     
-                    // Try to send message with unique ID and timestamp
+                    // Enhanced message sending with multiple attempts and fallbacks
                     try {{
                         const messageId = 'kite_auth_' + Date.now();
                         const message = {{
@@ -263,19 +286,72 @@ def kite_callback():
                             provider: 'kite',
                             user_id: '{user_id}',
                             timestamp: new Date().toISOString(),
-                            messageId: messageId
+                            messageId: messageId,
+                            attempt: 1
                         }};
                         
-                        debug(`Attempting to send message to parent: ${{JSON.stringify(message)}}`);
+                        debug(`Preparing to send message: ${{JSON.stringify(message)}}`);
                         
+                        // First attempt - standard method with wildcard origin
                         if (window.opener) {{
+                            debug('Message attempt 1: Using window.opener.postMessage with wildcard origin "*"');
                             window.opener.postMessage(message, '*');
-                            debug('Message sent using window.opener.postMessage');
+                            debug('Message attempt 1 sent');
+                            
+                            // Second attempt - with specific origin if available
+                            setTimeout(() => {{
+                                try {{
+                                    message.attempt = 2;
+                                    // Try to infer origin from the opener's URL if accessible
+                                    let targetOrigin = '*';
+                                    try {{
+                                        if (window.opener.location && window.opener.location.origin) {{
+                                            targetOrigin = window.opener.location.origin;
+                                            debug(`Access to opener.location.origin succeeded: ${{targetOrigin}}`);
+                                        }}
+                                    }} catch(e) {{
+                                        debug(`Cannot access opener.location.origin: ${{e.message}}. Using * instead.`);
+                                    }}
+                                    
+                                    debug(`Attempt 2: Sending with targetOrigin: ${{targetOrigin}}`);
+                                    window.opener.postMessage(message, targetOrigin);
+                                    debug('Message attempt 2 sent');
+                                }} catch(e) {{
+                                    debug(`Error in second message attempt: ${{e.message}}`);
+                                }}
+                            }}, 500);
+                            
+                            // Third attempt - store in sessionStorage for fallback
+                            setTimeout(() => {{
+                                try {{
+                                    message.attempt = 3;
+                                    debug('Attempt 3: Using sessionStorage as fallback communication');
+                                    // Try to access opener's sessionStorage
+                                    try {{
+                                        window.opener.sessionStorage.setItem('kiteAuthMessage', JSON.stringify(message));
+                                        debug('Successfully stored auth message in opener sessionStorage');
+                                    }} catch(e) {{
+                                        debug(`Cannot access opener.sessionStorage: ${{e.message}}`);
+                                        // Fall back to local sessionStorage with special key
+                                        sessionStorage.setItem('kiteAuthMessage_forParent', JSON.stringify(message));
+                                        debug('Stored message in local sessionStorage with special key');
+                                    }}
+                                }} catch(e) {{
+                                    debug(`Error in sessionStorage fallback: ${{e.message}}`);
+                                }}
+                            }}, 1000);
                         }} else {{
-                            debug('Warning: window.opener is null, cannot send message');
+                            debug('ERROR: window.opener is null, cannot send any messages');
+                            // Store in local sessionStorage anyway as last resort
+                            try {{
+                                sessionStorage.setItem('kiteAuthMessage_noOpener', JSON.stringify(message));
+                                debug('Stored auth message in local sessionStorage as last resort');
+                            }} catch(e) {{
+                                debug(`Failed to store in local sessionStorage: ${{e.message}}`);
+                            }}
                         }}
                     }} catch(e) {{
-                        debug(`Error sending message to parent: ${{e.message}}`);
+                        debug(`Critical error in message sending: ${{e.message}}`);
                     }}
                     
                     // Attempt to close window after delay
@@ -338,10 +414,22 @@ def kite_callback():
                         debugDiv.innerHTML += `<p>${{timestamp}}: ${{message}}</p>`;
                     }}
                     
-                    // Log window information
+                    // Enhanced window information logging
                     debug(`Window context - opener exists: ${{window.opener !== null}}`);
                     debug(`Window context - parent is different: ${{window.parent !== window}}`);
                     debug(`Current location: ${{window.location.href}}`);
+                    
+                    // Try detailed window debugging
+                    try {{
+                        debug(`Window detailed information: ${{JSON.stringify({{
+                            location: window.location.href,
+                            opener: window.opener !== null,
+                            openerOrigin: window.opener ? (window.opener.origin || 'inaccessible') : 'no opener',
+                            openerAlive: window.opener ? 'yes' : 'no'
+                        }})}}`);
+                    }} catch(e) {{
+                        debug(`Cannot log detailed window info: ${{e.message}}`);
+                    }}
                     
                     // Function to manually close the window
                     function closeWindowManually() {{
@@ -366,7 +454,7 @@ def kite_callback():
                         }}
                     }}, 1000);
                     
-                    // Try to send message with unique ID and timestamp
+                    // Try multiple approaches to send message
                     try {{
                         const messageId = 'kite_auth_failed_' + Date.now();
                         const message = {{
@@ -374,16 +462,65 @@ def kite_callback():
                             reason: 'auth-error',
                             user_id: '{user_id}',
                             timestamp: new Date().toISOString(),
-                            messageId: messageId
+                            messageId: messageId,
+                            attempt: 1
                         }};
                         
-                        debug(`Attempting to send failure message to parent: ${{JSON.stringify(message)}}`);
+                        debug(`Attempting to send failure message: ${{JSON.stringify(message)}}`);
                         
+                        // First attempt with wildcard origin
                         if (window.opener) {{
                             window.opener.postMessage(message, '*');
-                            debug('Failure message sent using window.opener.postMessage');
+                            debug('Failure message sent with wildcard origin');
+                            
+                            // Try another attempt with specific origin if possible
+                            setTimeout(() => {{
+                                try {{
+                                    message.attempt = 2;
+                                    debug('Trying second message send attempt');
+                                    // Try with explicit origin if accessible
+                                    try {{
+                                        if (window.opener.location && window.opener.location.origin) {{
+                                            const openerOrigin = window.opener.location.origin;
+                                            debug(`Opener origin found: ${{openerOrigin}}`);
+                                            window.opener.postMessage(message, openerOrigin);
+                                            debug('Sent second message with explicit origin');
+                                        }}
+                                    }} catch(e) {{
+                                        debug(`Cannot access opener origin: ${{e.message}}`);
+                                    }}
+                                }} catch(e) {{
+                                    debug(`Error in second attempt: ${{e.message}}`);
+                                }}
+                            }}, 500);
+                            
+                            // Try sessionStorage as fallback
+                            setTimeout(() => {{
+                                try {{
+                                    message.attempt = 3;
+                                    debug('Trying sessionStorage fallback');
+                                    try {{
+                                        window.opener.sessionStorage.setItem('kiteAuthFailureMessage', JSON.stringify(message));
+                                        debug('Stored failure message in opener sessionStorage');
+                                    }} catch(e) {{
+                                        debug(`Cannot access opener sessionStorage: ${{e.message}}`);
+                                        // Store locally as fallback
+                                        sessionStorage.setItem('kiteAuthFailureMessage_forParent', JSON.stringify(message));
+                                        debug('Stored failure in local sessionStorage');
+                                    }}
+                                }} catch(e) {{
+                                    debug(`Error in sessionStorage fallback: ${{e.message}}`);
+                                }}
+                            }}, 1000);
                         }} else {{
                             debug('Warning: window.opener is null, cannot send message');
+                            // Try to store locally anyway
+                            try {{
+                                sessionStorage.setItem('kiteAuthFailureMessage_noOpener', JSON.stringify(message));
+                                debug('Stored failure in local storage as last resort');
+                            }} catch(e) {{
+                                debug(`Cannot store locally: ${{e.message}}`);
+                            }}
                         }}
                     }} catch(e) {{
                         debug(`Error sending message to parent: ${{e.message}}`);
@@ -427,13 +564,283 @@ def kite_callback():
             <h2>Authentication Error</h2>
             <p>An error occurred during authentication: {str(e)}</p>
             <script>
-                window.opener.postMessage({{"status": "error", "reason": "Error: {error_msg}"}}, '*');
+                console.log('[KiteAuth] Authentication error: {error_msg}');
+                
+                try {{
+                    if (window.opener) {{
+                        window.opener.postMessage({{
+                            "status": "error", 
+                            "reason": "Error: {error_msg}",
+                            "timestamp": new Date().toISOString()
+                        }}, '*');
+                        console.log('[KiteAuth] Error message sent to opener');
+                    }}
+                }} catch(e) {{
+                    console.error('[KiteAuth] Failed to send error message:', e);
+                }}
+                
                 setTimeout(function() {{ window.close(); }}, 2000);
             </script>
         </body>
         </html>
         """, mimetype='text/html')
 
+@app.route('/api/kite/debug-auth', methods=['GET'])
+def debug_kite_auth():
+    """Debug endpoint for troubleshooting Kite authentication communication"""
+    try:
+        # Get user_id from query parameter
+        user_id = request.args.get('user_id', DEFAULT_KITE_USER)
+        
+        logger.info(f"Kite authentication debug requested for user: {user_id}")
+        
+        # Get provider info
+        provider_info = provider_factory.get_provider_info()
+        current_provider = provider_factory.get_provider_name()
+        
+        # Create simple test HTML page that tests postMessage communication
+        return Response(f"""
+        <html>
+        <head>
+            <title>Kite Authentication Communication Debugger</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; padding: 20px; }}
+                .debug-section {{ background: #f5f5f5; border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 4px; }}
+                h2 {{ color: #2c3e50; }}
+                button {{ padding: 8px 16px; margin: 5px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; }}
+                button:hover {{ background: #2980b9; }}
+                #log {{ font-family: monospace; white-space: pre-wrap; max-height: 300px; overflow-y: auto; background: #272822; color: #f8f8f2; padding: 10px; margin-top: 10px; }}
+            </style>
+        </head>
+        <body>
+            <h1>Kite Authentication Communication Debugger</h1>
+            
+            <div class="debug-section">
+                <h2>Window Information</h2>
+                <div id="window-info"></div>
+            </div>
+            
+            <div class="debug-section">
+                <h2>Test Communication</h2>
+                <button id="test-parent">Test Messaging to Parent Window</button>
+                <button id="check-storage">Check SessionStorage Content</button>
+                <button id="store-test">Store Test Message (Session Storage)</button>
+            </div>
+            
+            <div class="debug-section">
+                <h2>Auth Status</h2>
+                <p>Current Provider: <span id="current-provider">{current_provider}</span></p>
+                <p>User ID: <span id="user-id">{user_id}</span></p>
+                <button id="check-token">Check Token Validity</button>
+            </div>
+            
+            <div class="debug-section">
+                <h2>Debug Log</h2>
+                <div id="log"></div>
+            </div>
+            
+            <script>
+                // Log helper function
+                function log(message, type = 'info') {{
+                    const logEl = document.getElementById('log');
+                    const timestamp = new Date().toISOString();
+                    const color = type === 'error' ? '#ff6b6b' : 
+                                 type === 'success' ? '#5cb85c' : 
+                                 type === 'warn' ? '#f0ad4e' : '#f8f8f2';
+                    logEl.innerHTML += `<div style="color: ${{color}}">[${{timestamp}}] ${{message}}</div>`;
+                    logEl.scrollTop = logEl.scrollHeight;
+                    console.log(`[KiteAuthDebug] ${{message}}`);
+                }}
+                
+                // Gather window information
+                function updateWindowInfo() {{
+                    const winInfo = document.getElementById('window-info');
+                    const info = {{
+                        url: window.location.href,
+                        origin: window.location.origin,
+                        opener: window.opener !== null,
+                        parent: window.parent !== window,
+                        sessionStorage: typeof sessionStorage !== 'undefined'
+                    }};
+                    
+                    try {{
+                        if (window.opener) {{
+                            try {{
+                                info.openerOrigin = window.opener.location.origin;
+                                info.canAccessOpener = true;
+                            }} catch(e) {{
+                                info.openerOrigin = 'Cannot access - ' + e.message;
+                                info.canAccessOpener = false;
+                            }}
+                        }}
+                    }} catch(e) {{
+                        log('Error checking opener: ' + e.message, 'error');
+                    }}
+                    
+                    winInfo.innerHTML = '<pre>' + JSON.stringify(info, null, 2) + '</pre>';
+                    log('Window information updated');
+                }}
+                
+                // Test messaging to parent
+                document.getElementById('test-parent').addEventListener('click', () => {{
+                    log('Testing communication with parent window...');
+                    
+                    try {{
+                        const testMessage = {{
+                            type: 'test',
+                            source: 'kite-auth-debugger',
+                            timestamp: new Date().toISOString(),
+                            user: '{user_id}'
+                        }};
+                        
+                        if (window.opener) {{
+                            log('Found window.opener, attempting to send message...');
+                            window.opener.postMessage(testMessage, '*');
+                            log('Message sent with wildcard origin. Check parent console.', 'success');
+                            
+                            // Try with specific target origin if possible
+                            try {{
+                                if (window.opener.location && window.opener.location.origin) {{
+                                    const openerOrigin = window.opener.location.origin;
+                                    log(`Found opener origin: ${{openerOrigin}}, sending targeted message...`);
+                                    window.opener.postMessage(testMessage, openerOrigin);
+                                    log(`Message sent with specific origin: ${{openerOrigin}}`, 'success');
+                                }}
+                            }} catch(e) {{
+                                log(`Cannot access opener.location.origin: ${{e.message}}`, 'error');
+                            }}
+                        }} else {{
+                            log('window.opener is null, cannot send message', 'error');
+                        }}
+                        
+                        // Also try parent if it exists and is different
+                        if (window.parent && window.parent !== window) {{
+                            log('Found distinct parent window, attempting to send message...');
+                            window.parent.postMessage(testMessage, '*');
+                            log('Message sent to parent with wildcard origin', 'success');
+                        }}
+                    }} catch(e) {{
+                        log('Error sending message: ' + e.message, 'error');
+                    }}
+                }});
+                
+                // Check session storage
+                document.getElementById('check-storage').addEventListener('click', () => {{
+                    log('Checking sessionStorage...');
+                    
+                    try {{
+                        const items = [];
+                        const itemCount = sessionStorage.length;
+                        
+                        log(`SessionStorage has ${{itemCount}} items`);
+                        
+                        for (let i = 0; i < sessionStorage.length; i++) {{
+                            const key = sessionStorage.key(i);
+                            let value = sessionStorage.getItem(key);
+                            
+                            try {{
+                                // Try to parse as JSON
+                                value = JSON.parse(value);
+                                log(`Found item: ${{key}} = ${{JSON.stringify(value)}}`, 'success');
+                            }} catch (e) {{
+                                // If not JSON, show as string
+                                if (value.length > 100) {{
+                                    value = value.substr(0, 100) + '...';
+                                }}
+                                log(`Found item: ${{key}} = ${{value}}`, 'info');
+                            }}
+                        }}
+                        
+                        // Check parent storage if possible
+                        if (window.opener) {{
+                            try {{
+                                const openerItemCount = window.opener.sessionStorage.length;
+                                log(`Opener's sessionStorage has ${{openerItemCount}} items`);
+                                
+                                for (let i = 0; i < openerItemCount; i++) {{
+                                    const key = window.opener.sessionStorage.key(i);
+                                    if (key.includes('kite')) {{
+                                        log(`Opener has relevant item: ${{key}}`, 'success');
+                                    }}
+                                }}
+                            }} catch(e) {{
+                                log(`Cannot access opener's sessionStorage: ${{e.message}}`, 'error');
+                            }}
+                        }}
+                    }} catch(e) {{
+                        log('Error checking sessionStorage: ' + e.message, 'error');
+                    }}
+                }});
+                
+                // Store test message
+                document.getElementById('store-test').addEventListener('click', () => {{
+                    log('Storing test message in sessionStorage...');
+                    
+                    try {{
+                        const testMessage = {{
+                            status: 'success',
+                            provider: 'kite',
+                            user_id: '{user_id}',
+                            timestamp: new Date().toISOString(),
+                            messageId: 'debug_' + Date.now()
+                        }};
+                        
+                        sessionStorage.setItem('kiteAuthMessage_debug', JSON.stringify(testMessage));
+                        log('Test message stored in local sessionStorage', 'success');
+                        
+                        // Try storing in parent if possible
+                        if (window.opener) {{
+                            try {{
+                                window.opener.sessionStorage.setItem('kiteAuthMessage', JSON.stringify(testMessage));
+                                log('Test message stored in opener sessionStorage', 'success');
+                            }} catch(e) {{
+                                log(`Cannot store in opener's sessionStorage: ${{e.message}}`, 'error');
+                            }}
+                        }}
+                    }} catch(e) {{
+                        log('Error storing test message: ' + e.message, 'error');
+                    }}
+                }});
+                
+                // Check token validity
+                document.getElementById('check-token').addEventListener('click', () => {{
+                    log('Checking token validity for user: {user_id}');
+                    
+                    fetch('/api/kite/verify-token?user_id={user_id}')
+                        .then(response => response.json())
+                        .then(data => {{
+                            if (data.success) {{
+                                const status = data.valid ? 'valid' : 'invalid';
+                                log(`Token status: ${{status}}`, data.valid ? 'success' : 'warn');
+                            }} else {{
+                                log(`Error checking token: ${{data.error}}`, 'error');
+                            }}
+                        }})
+                        .catch(err => {{
+                            log(`Network error checking token: ${{err.message}}`, 'error');
+                        }});
+                }});
+                
+                // Initialize
+                updateWindowInfo();
+                log('Debug page loaded');
+                
+                // Set up listener for messages from other windows
+                window.addEventListener('message', event => {{
+                    log(`Received message from origin: ${{event.origin}}`);
+                    try {{
+                        log(`Message data: ${{JSON.stringify(event.data)}}`);
+                    }} catch (e) {{
+                        log(`Cannot stringify message data: ${{e.message}}`, 'error');
+                    }}
+                }});
+            </script>
+        </body>
+        </html>
+        """, mimetype='text/html')
+    except Exception as e:
+        logger.error(f"Error in Kite auth debug endpoint: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/kite/verify-token', methods=['GET'])
 def verify_kite_token():

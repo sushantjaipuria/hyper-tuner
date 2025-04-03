@@ -60,11 +60,36 @@ const KiteAuthModal = ({ isOpen, onClose, userId }) => {
         effectiveUserId: effectiveUserId,
         effectiveUserIdType: typeof effectiveUserId,
         currentKiteUser: currentKiteUser,
+        windowOrigin: window.location.origin,
         stackTrace: new Error().stack.split('\n').slice(1, 4).join('\n')
       });
       sessionStorage.setItem('kiteAuthModalOpened', new Date().toISOString());
+      
+      // Make debug info visible in development by default
+      if (process.env.NODE_ENV === 'development') {
+        setDebugVisible(true);
+      }
+      
+      // Register in the global window object for direct access
+      window.kiteAuthModal = {
+        getUserId: () => effectiveUserId,
+        getState: () => ({
+          tokenValid,
+          requiresAuth,
+          userId: effectiveUserId,
+          isLoading,
+          isOpen
+        }),
+        triggerLogin: handleLoginClick,
+        triggerCancel: handleCancelClick,
+        debugCheck: handleManualCheck
+      };
     }
-  }, [isOpen, tokenValid, requiresAuth, userId, effectiveUserId, currentKiteUser]);
+    
+    return () => {
+      delete window.kiteAuthModal;
+    };
+  }, [isOpen, tokenValid, requiresAuth, userId, effectiveUserId, currentKiteUser, isLoading]);
   
   // When the modal is open, refresh debug info
   useEffect(() => {
@@ -214,6 +239,9 @@ const KiteAuthModal = ({ isOpen, onClose, userId }) => {
             <p>Message count: {debugInfo?.sessionStorage?.kiteAuthMessageCount || '0'}</p>
             <p>Success message: {debugInfo?.sessionStorage?.lastKiteAuthSuccess || 'None'}</p>
             <p>Failure message: {debugInfo?.sessionStorage?.lastKiteAuthFailure || 'None'}</p>
+            <p>Domain: {window.location.hostname}</p>
+            <p>Protocol: {window.location.protocol}</p>
+            <p>Origin: {window.location.origin}</p>
             <p className="mt-2">Updated: {debugInfo?.context?.timestamp || 'Unknown'}</p>
           </div>
         )}
@@ -227,13 +255,25 @@ const KiteAuthModal = ({ isOpen, onClose, userId }) => {
           </button>
           
           {debugVisible && (
-            <button
-              className="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded ml-2"
-              onClick={handleManualCheck}
-              disabled={isLoading}
-            >
-              Manual Token Check
-            </button>
+            <div className="flex ml-2">
+              <button
+                className="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded mr-2"
+                onClick={handleManualCheck}
+                disabled={isLoading}
+              >
+                Manual Token Check
+              </button>
+              <button
+                className="text-xs bg-blue-200 hover:bg-blue-300 px-2 py-1 rounded"
+                onClick={() => {
+                  logModalDebug('Opening backend debug page');
+                  window.open(`/api/kite/debug-auth?user_id=${effectiveUserId || 'sushant'}`, '_blank', 'width=800,height=600');
+                }}
+                disabled={isLoading}
+              >
+                Debug Auth Page
+              </button>
+            </div>
           )}
         </div>
         
