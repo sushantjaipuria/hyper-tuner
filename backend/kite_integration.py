@@ -13,7 +13,7 @@ class KiteIntegration(DataProvider):
         Initialize the Kite API integration for a specific user
         
         Args:
-            user_id (str): User identifier (default: "sushant")
+            user_id (str): User identifier (default: "satyam")
         """
         super().__init__()
         self.logger = logging.getLogger(__name__)
@@ -227,7 +227,7 @@ class KiteIntegration(DataProvider):
 # Example usage:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    kite = KiteIntegration(user_id="sushant")
+    kite = KiteIntegration(user_id="satyam")
     print(f"User info: {kite.get_user_info()}")
     print(f"Using placeholders: {kite.is_using_placeholders()}")
     print(f"Login URL: {kite.get_login_url()}")
