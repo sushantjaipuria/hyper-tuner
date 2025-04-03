@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 ROOT_DIR = Path(__file__).parent
 
 # Kite API configuration
-DEFAULT_KITE_USER = "sushant"  # Default user
+DEFAULT_KITE_USER = "satyam"  # Default user
 # Template as string for proper formatting
 KITE_CONFIG_FILE_TEMPLATE = "kite_config_{user_id}.json"
 LEGACY_KITE_CONFIG_FILE = ROOT_DIR / "kite_config.json"  # For backward compatibility
