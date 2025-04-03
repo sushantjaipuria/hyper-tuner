@@ -24,20 +24,14 @@ class DataProviderFactory:
         Returns:
             DataProvider: An instance of DataProvider
         """
-        # If we already have a provider and aren't forcing a change, return it
-        if (self._provider is not None and 
-            force_provider is None and 
-            (not user_id or user_id == self._provider_user)):
-            return self._provider
-        
         # If forcing a specific provider
         if force_provider is not None:
             self.logger.info(f"Forcing data provider: {force_provider}" + 
                            (f" for user '{user_id}'" if user_id and force_provider.lower() == 'kite' else ""))
             
             if force_provider.lower() == 'kite':
-                # For Kite provider, use the specified user ID (default to "sushant")
-                current_user = user_id or DEFAULT_KITE_USER
+                # For Kite provider, use the specified user ID (default to current user or "sushant")
+                current_user = user_id or self._provider_user or DEFAULT_KITE_USER
                 self._provider = KiteIntegration(user_id=current_user)
                 self._provider_name = 'kite'
                 self._provider_user = current_user
@@ -60,6 +54,15 @@ class DataProviderFactory:
             else:
                 self.logger.warning(f"Unknown provider: {force_provider}, falling back to default (Yahoo Finance)")
         
+        # If we already have a provider and aren't forcing a change
+        if self._provider is not None:
+            # Fix: Always maintain the current Kite user, even when called without parameters
+            if self._provider_name == 'kite' and self._provider_user:
+                self.logger.debug(f"Reusing existing Kite provider for user '{self._provider_user}'")
+            else:
+                self.logger.debug(f"Reusing existing provider: {self._provider_name}")
+            return self._provider
+            
         # Default to Yahoo Finance as per requirements
         self.logger.info("Using Yahoo Finance as default data provider")
         self._provider = YahooFinanceIntegration()
@@ -86,6 +89,9 @@ class DataProviderFactory:
         if self._provider_name == 'kite' and self._provider_user:
             info["user_id"] = self._provider_user
             info["display_name"] = f"Kite-{self._provider_user.capitalize()}"
+            
+            # Add diagnostic info for troubleshooting
+            self.logger.info(f"Current provider info - Name: {self._provider_name}, User: {self._provider_user}")
         
         return info
     

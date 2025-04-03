@@ -69,11 +69,19 @@ export const DataSourceProvider = ({ children }) => {
         const info = await api.getDataProviderInfo();
         logDebug("Received data provider info:", info);
         
+        // Enhanced debugging for user selection
+        if (info.provider === 'kite' && info.user_id) {
+          logDebug(`Setting Kite user to '${info.user_id}' with display name '${info.display_name}'`);
+        }
+        
         setDataProvider(info.provider);
         
-        // Set display name from API response or use fallback
+        // Set display name with better validation
         if (info.display_name) {
           setDataProviderDisplayName(info.display_name);
+        } else if (info.provider === 'kite' && info.user_id) {
+          const capitalizedUser = info.user_id.charAt(0).toUpperCase() + info.user_id.slice(1);
+          setDataProviderDisplayName(`Kite-${capitalizedUser}`);
         } else if (info.provider === 'kite') {
           setDataProviderDisplayName('Zerodha Kite');
         } else {
@@ -83,6 +91,7 @@ export const DataSourceProvider = ({ children }) => {
         // Set current Kite user if available
         if (info.user_id) {
           setCurrentKiteUser(info.user_id);
+          logDebug(`Current Kite user set to '${info.user_id}'`);
         }
         
         // Check token validity if Kite is selected
@@ -132,23 +141,36 @@ export const DataSourceProvider = ({ children }) => {
       
       logDebug(`Changing data provider to: ${provider}${userId ? ` for user: ${userId}` : ''}`);
       
+      // Store the requested values for verification
+      const requestedProvider = provider;
+      const requestedUserId = userId;
+      
       const response = await api.setDataProvider(provider, userId);
       
       if (response.success) {
         setDataProvider(response.provider);
         
-        // Set display name and current user if available
+        // Verify the response matches what we requested
+        if (requestedProvider === 'kite' && requestedUserId && 
+            response.user_id !== requestedUserId) {
+          logDebug(`WARNING: Requested user '${requestedUserId}' but received '${response.user_id}'`);
+        }
+        
+        // Set display name with better validation
         if (response.display_name) {
+          logDebug(`Setting display name to: ${response.display_name}`);
           setDataProviderDisplayName(response.display_name);
         } else {
-          setDataProviderDisplayName(
-            response.provider === 'kite' 
-              ? `Kite${userId ? `-${userId.charAt(0).toUpperCase() + userId.slice(1)}` : ''}`
-              : 'Yahoo Finance'
-          );
+          // Fallback display name logic
+          const displayName = response.provider === 'kite' 
+            ? `Kite${userId ? `-${userId.charAt(0).toUpperCase() + userId.slice(1)}` : ''}`
+            : 'Yahoo Finance';
+          logDebug(`Setting fallback display name to: ${displayName}`);
+          setDataProviderDisplayName(displayName);
         }
         
         if (response.user_id) {
+          logDebug(`Setting current Kite user to: ${response.user_id}`);
           setCurrentKiteUser(response.user_id);
         } else if (provider === 'yahoo') {
           setCurrentKiteUser(null);

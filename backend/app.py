@@ -60,6 +60,9 @@ def get_data_provider():
     provider_info = provider_factory.get_provider_info()
     display_name = provider_info.get("display_name", provider_info.get("name", "unknown"))
     
+    # Add logging to track provider info being sent to frontend
+    logger.info(f"Sending provider info to frontend - Provider: {provider_info.get('name')}, User: {provider_info.get('user_id')}, Display: {display_name}")
+    
     return jsonify({
         "success": True,
         "provider": provider_info.get("name"),
@@ -81,11 +84,8 @@ def set_data_provider():
             logger.error("Missing provider name in request")
             return jsonify({"success": False, "error": "Missing provider name"}), 400
         
-        # Log the provider selection with user if applicable
-        if user_id and provider_name.lower() == 'kite':
-            logger.info(f"Setting data provider to: {provider_name} for user: {user_id}")
-        else:
-            logger.info(f"Setting data provider to: {provider_name}")
+        # Log the incoming request
+        logger.info(f"Setting data provider - Provider: {provider_name}, User: {user_id}")
         
         # Force the specified provider with user ID if applicable
         data_provider = provider_factory.get_provider(force_provider=provider_name, user_id=user_id)
@@ -105,6 +105,11 @@ def set_data_provider():
         
         # Get detailed provider info
         provider_info = provider_factory.get_provider_info()
+        
+        # Verify the result matches what was requested
+        result_user = provider_info.get("user_id")
+        if provider_name.lower() == 'kite' and user_id and result_user != user_id:
+            logger.warning(f"Provider user mismatch! Requested: {user_id}, Result: {result_user}")
         
         # Return the provider info
         return jsonify({
@@ -627,7 +632,11 @@ def run_backtest():
             # Get the current data provider from the factory - this ensures we use the most recently selected provider
             current_data_provider = provider_factory.get_provider()
             current_provider_name = provider_factory.get_provider_name()
-            logger.info(f"Using current data provider: {current_provider_name}")
+            current_provider_user = provider_factory._provider_user
+            
+            # Enhanced logging for debugging provider consistency
+            logger.info(f"Running backtest with provider: {current_provider_name}" + 
+                       (f", user: {current_provider_user}" if current_provider_user else ""))
             
             # Debug output for provider verification
             if hasattr(current_data_provider, '__class__'):
