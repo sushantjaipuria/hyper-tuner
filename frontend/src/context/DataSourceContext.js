@@ -143,11 +143,11 @@ export const DataSourceProvider = ({ children }) => {
       { value: 'yahoo', label: 'Yahoo Finance' }
     ];
     
-    // Add options for Kite users
+    // Add options for Kite users with compound values
     if (kiteUsers && kiteUsers.length > 0) {
       kiteUsers.forEach(user => {
         options.push({
-          value: 'kite',
+          value: `kite:${user.user_id}`, // Changed: now using a compound value
           user_id: user.user_id,
           label: user.display_name,
           authenticated: user.authenticated
@@ -161,11 +161,26 @@ export const DataSourceProvider = ({ children }) => {
     return options;
   }, [kiteUsers, kiteUsersLoaded]);
   
+  // Helper to get base provider without the user ID part
+  const getBaseProvider = (providerValue) => {
+    if (providerValue && typeof providerValue === 'string' && providerValue.includes(':')) {
+      return providerValue.split(':')[0];
+    }
+    return providerValue;
+  };
+  
   // Change data provider
   const changeDataProvider = async (provider, userId = null) => {
     try {
       setLoading(true);
       setError(null);
+      
+      // Handle compound values (e.g., "kite:sushant")
+      if (provider && provider.includes(':')) {
+        const parts = provider.split(':');
+        provider = parts[0];
+        userId = parts[1] || userId;
+      }
       
       logDebug(`Changing data provider to: ${provider}${userId ? ` for user: ${userId}` : ''}`);
       
@@ -297,6 +312,9 @@ export const DataSourceProvider = ({ children }) => {
       debugSessionStorage('kiteTokenVerifyResponse', {
         response,
         userId,
+        dataProvider,
+        baseProvider: getBaseProvider(dataProvider),
+        currentDropdownValue: dataProvider === 'kite' && currentKiteUser ? `kite:${currentKiteUser}` : dataProvider,
         timestamp: new Date().toISOString(),
         requestDuration: Math.round(endTime - startTime)
       });
@@ -370,8 +388,11 @@ export const DataSourceProvider = ({ children }) => {
     const isPastTradingHours = istTime.getHours() > 15 || 
                               (istTime.getHours() === 15 && istTime.getMinutes() >= 30 && istTime.getSeconds() >= 5);
     
+    // Get base provider (handle compound values)
+    const baseProvider = getBaseProvider(dataProvider);
+    
     // If past trading hours and we're using Kite, we should verify
-    return dataProvider === 'kite' && isPastTradingHours;
+    return baseProvider === 'kite' && isPastTradingHours;
   };
   
   // Debug function to check if listener is active
@@ -968,7 +989,8 @@ export const DataSourceProvider = ({ children }) => {
         checkKiteToken,
         initiateKiteAuth,
         shouldVerifyToken,
-        refreshKiteUsers
+        refreshKiteUsers,
+        getBaseProvider // Add our new utility function
       }}
     >
       {children}

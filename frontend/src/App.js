@@ -154,20 +154,38 @@ function AppContent() {
     changeDataProvider,
     getDataProviderOptions,
     refreshKiteUsers,
-    currentKiteUser
+    currentKiteUser,
+    getBaseProvider
   } = useContext(DataSourceContext);
   
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [refreshingUsers, setRefreshingUsers] = useState(false);
   
+  // Function to determine the current dropdown value based on provider and user
+  const getCurrentDropdownValue = () => {
+    if (!dataProvider) return 'yahoo'; // Default fallback
+    
+    if (dataProvider === 'kite' && currentKiteUser) {
+      return `kite:${currentKiteUser}`;
+    } else if (typeof dataProvider === 'string' && dataProvider.includes(':')) {
+      // Already in compound format
+      return dataProvider;
+    }
+    
+    return dataProvider;
+  };
+  
   // Show auth modal if Kite requires authentication
   useEffect(() => {
-    if (requiresAuth && dataProvider === 'kite') {
+    // Get the base provider without the user ID part
+    const baseProvider = getBaseProvider(dataProvider);
+    
+    if (requiresAuth && baseProvider === 'kite') {
       setShowAuthModal(true);
     } else {
       setShowAuthModal(false);
     }
-  }, [requiresAuth, dataProvider]);
+  }, [requiresAuth, dataProvider, getBaseProvider]);
   
   // Create debug helper for authentication diagnostics
   useEffect(() => {
@@ -227,12 +245,28 @@ function AppContent() {
   // Handle data provider selection change
   const handleProviderChange = (e) => {
     const value = e.target.value;
-    const selectedIndex = e.target.selectedIndex;
-    const selectedOption = e.target.options[selectedIndex];
-    const userId = selectedOption.getAttribute('data-user-id');
+    let providerName, userId;
     
-    // Call changeDataProvider with the provider value and userId if available
-    changeDataProvider(value, userId);
+    // Parse compound values like "kite:sushant"
+    if (value.includes(':')) {
+      [providerName, userId] = value.split(':');
+    } else {
+      // Handle simple values like "yahoo"
+      providerName = value;
+      const selectedIndex = e.target.selectedIndex;
+      const selectedOption = e.target.options[selectedIndex];
+      userId = selectedOption.getAttribute('data-user-id');
+    }
+    
+    // Log the selection (helpful for debugging)
+    console.log('Provider change:', { 
+      rawValue: value,
+      parsedProvider: providerName,
+      parsedUserId: userId
+    });
+    
+    // Call changeDataProvider with the extracted provider and userId
+    changeDataProvider(providerName, userId);
   };
   
   // Handle refresh button click
@@ -256,18 +290,28 @@ function AppContent() {
                 <span className="mr-2">Data Source:</span>
                 <select
                   className="bg-blue-700 border border-blue-600 rounded px-2 py-1 text-white"
-                  value={dataProvider}
+                  value={getCurrentDropdownValue()}
                   onChange={handleProviderChange}
                 >
-                  {getDataProviderOptions().map((option, index) => (
-                    <option 
-                      key={`${option.value}-${option.user_id || index}`}
-                      value={option.value}
-                      data-user-id={option.user_id}
-                    >
-                      {option.label} {option.authenticated === false ? '(Login Required)' : ''}
-                    </option>
-                  ))}
+                  {(() => {
+                    const options = getDataProviderOptions();
+                    // Log dropdown state for debugging
+                    console.log('Dropdown rendering:', {
+                      options,
+                      currentValue: getCurrentDropdownValue(),
+                      dataProvider,
+                      currentKiteUser
+                    });
+                    return options.map((option, index) => (
+                      <option 
+                        key={`${option.value}-${option.user_id || index}`}
+                        value={option.value}
+                        data-user-id={option.user_id}
+                      >
+                        {option.label} {option.authenticated === false ? '(Login Required)' : ''}
+                      </option>
+                    ));
+                  })()}
                 </select>
                 <button
                   className="ml-2 text-xs bg-blue-600 hover:bg-blue-700 rounded p-1"
