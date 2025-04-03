@@ -33,7 +33,7 @@ class DataProviderFactory:
                            (f" for user '{user_id}'" if user_id and force_provider.lower() == 'kite' else ""))
             
             if force_provider.lower() == 'kite':
-                # For Kite provider, use the specified user ID (default to current user or "sushant")
+                # For Kite provider, use the specified user ID (default to current user or DEFAULT_KITE_USER)
                 current_user = user_id or self._provider_user or DEFAULT_KITE_USER
                 self.logger.info(f"Creating Kite provider with user_id: '{current_user}' (type: {type(current_user).__name__})")
                 self.logger.info(f"Original user_id: '{user_id}' (type: {type(user_id).__name__}), _provider_user: '{self._provider_user}', DEFAULT: '{DEFAULT_KITE_USER}'")
@@ -151,5 +151,5 @@ if __name__ == "__main__":
     print(f"Using provider: {provider_factory.get_provider_name()}")
     
     # Test with a specific user
-    kite_provider = provider_factory.get_provider(force_provider='kite', user_id='sushant')
+    kite_provider = provider_factory.get_provider(force_provider='kite', user_id='satyam')
     print(f"Provider info: {provider_factory.get_provider_info()}")
