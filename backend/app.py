@@ -167,7 +167,11 @@ def kite_callback():
         request_token = request.args.get('request_token')
         
         # Get user_id from query params (added to login URL by KiteIntegration.get_login_url)
-        user_id = request.args.get('kite_user_id', DEFAULT_KITE_USER)
+        user_id = request.args.get('kite_user_id')
+        if not user_id:
+            # Use the tracked user from provider factory instead of DEFAULT_KITE_USER
+            user_id = provider_factory._provider_user or DEFAULT_KITE_USER
+            logger.info(f"No user_id in callback, using tracked user: {user_id}")
         
         if not request_token:
             logger.error("No request token in callback")
