@@ -176,6 +176,15 @@ export const DataSourceProvider = ({ children }) => {
           setCurrentKiteUser(null);
         }
         
+        // Log requiresAuth state before updating
+        logDebug(`Setting requiresAuth to:`, {
+          newValue: response.requires_auth,
+          valueType: typeof response.requires_auth,
+          provider: response.provider,
+          responseUserId: response.user_id,
+          currentStateStack: new Error().stack.split('\n').slice(1, 3).join('\n')
+        });
+        
         setRequiresAuth(response.requires_auth);
         
         // If provider is Kite and authentication is required, set state
@@ -196,6 +205,24 @@ export const DataSourceProvider = ({ children }) => {
   // Check Kite token validity with enhanced debugging
   const checkKiteToken = async (userId = null, force = false) => {
     try {
+      // Enhanced logging to track exactly what's being passed
+      logDebug(`checkKiteToken called with:`, {
+        userId: userId,
+        userIdType: typeof userId,
+        userIdStringified: String(userId),
+        userIdIsBoolean: typeof userId === 'boolean',
+        force: force,
+        currentKiteUser: currentKiteUser,
+        requiresAuth: requiresAuth,
+        callStack: new Error().stack.split('\n').slice(1, 4).join('\n') // First few lines of stack trace
+      });
+      
+      // Defensive check - if userId is literally 'true', use currentKiteUser instead
+      if (userId === 'true' || userId === true) {
+        logDebug(`Detected 'true' as userId, using currentKiteUser instead: ${currentKiteUser}`);
+        userId = currentKiteUser;
+      }
+      
       // Add to session storage debug log
       logDebug(`Checking Kite token validity (force=${force}, userId=${userId || 'default'})`);
       
@@ -379,7 +406,10 @@ export const DataSourceProvider = ({ children }) => {
       timestamp: new Date().toISOString(),
       dataProvider: dataProvider,
       tokenValid: tokenValid,
-      requiresAuth: requiresAuth
+      requiresAuth: requiresAuth,
+      requiresAuthType: typeof requiresAuth,
+      currentKiteUser: currentKiteUser,
+      callStack: new Error().stack.split('\n').slice(1, 3).join('\n')
     };
     
     logDebug('Received message event', messageInfo);
@@ -569,8 +599,24 @@ export const DataSourceProvider = ({ children }) => {
   // Initiate Kite authentication with enhanced debugging
   const initiateKiteAuth = async (userId = null) => {
     try {
+      // Defensive check - if userId is literally 'true', use currentKiteUser instead
+      if (userId === 'true' || userId === true) {
+        logDebug(`Detected 'true' as userId, using currentKiteUser instead: ${currentKiteUser}`);
+        userId = currentKiteUser;
+      }
+      
       setLoading(true);
-      logDebug(`Initiating Kite authentication for user: ${userId || currentKiteUser || 'default'}`);
+      logDebug(`Initiating Kite authentication with params:`, {
+        userId: userId,
+        userIdType: typeof userId,
+        userIdStringified: String(userId),
+        currentKiteUser: currentKiteUser,
+        currentKiteUserType: typeof currentKiteUser,
+        dataProvider: dataProvider,
+        tokenValid: tokenValid,
+        requiresAuth: requiresAuth,
+        callStack: new Error().stack.split('\n').slice(1, 4).join('\n')
+      });
       
       // Log current state before initiating auth
       logDebug("Current state before authentication", {

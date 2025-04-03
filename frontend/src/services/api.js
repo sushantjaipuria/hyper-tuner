@@ -161,14 +161,32 @@ const api = {
   
   // Set data provider
   setDataProvider: async (provider, userId = null) => {
+    console.log('setDataProvider called with:', { 
+      provider, 
+      userId, 
+      userIdType: typeof userId,
+      stack: new Error().stack.split('\n').slice(1, 4).join('\n')
+    });
+    
     const payload = { provider };
     
     // Add user_id to the payload if it's provided and this is a Kite provider
     if (userId && (provider === 'kite' || provider.startsWith('kite-'))) {
-      payload.user_id = userId;
+      // Prevent the literal string 'true' from being used as a user ID
+      if (userId === 'true' || userId === true) {
+        console.warn('Prevented literal "true" from being used as user_id in setDataProvider', {
+          userId: userId,
+          userIdType: typeof userId
+        });
+      } else {
+        console.log('Adding user_id to payload:', { userId, userIdType: typeof userId });
+        payload.user_id = userId;
+      }
     }
     
+    console.log('Sending payload to /set-data-provider:', payload);
     const response = await axios.post(`${API_URL}/set-data-provider`, payload);
+    console.log('Response from /set-data-provider:', response.data);
     return response.data;
   },
   
@@ -186,27 +204,63 @@ const api = {
   
   // Get Kite login URL
   getKiteLoginUrl: async (userId = null) => {
+    console.log('getKiteLoginUrl called with:', { 
+      userId, 
+      userIdType: typeof userId,
+      stack: new Error().stack.split('\n').slice(1, 4).join('\n')
+    });
+    
     let url = `${API_URL}/kite/login-url`;
     
     // Add user_id as a query parameter if provided
     if (userId) {
-      url += `?user_id=${encodeURIComponent(userId)}`;
+      // Prevent the literal string 'true' from being used as a user ID
+      if (userId === 'true' || userId === true) {
+        console.warn('Prevented literal "true" from being used as user_id in getKiteLoginUrl', {
+          userId: userId,
+          userIdType: typeof userId
+        });
+      } else {
+        console.log('Adding user_id to URL:', { userId, userIdType: typeof userId });
+        url += `?user_id=${encodeURIComponent(userId)}`;
+      }
     }
     
+    console.log('Making request to:', url);
     const response = await axios.get(url);
+    console.log('Response from getKiteLoginUrl:', response.data);
     return response.data;
   },
   
   // Verify Kite token
   verifyKiteToken: async (userId = null) => {
+    console.log('verifyKiteToken called with:', { 
+      userId, 
+      userIdType: typeof userId,
+      userIdIsBoolean: typeof userId === 'boolean',
+      stack: new Error().stack.split('\n').slice(1, 4).join('\n')
+    });
+    
     let url = `${API_URL}/kite/verify-token`;
     
     // Add user_id as a query parameter if provided
     if (userId) {
-      url += `?user_id=${encodeURIComponent(userId)}`;
+      // Prevent the literal string 'true' from being used as a user ID
+      if (userId === 'true' || userId === true) {
+        console.warn('Prevented literal "true" from being used as user_id in verifyKiteToken', {
+          userId: userId,
+          userIdType: typeof userId,
+          valueAsString: String(userId)
+        });
+      } else {
+        console.log('Adding user_id to URL:', { userId, userIdType: typeof userId });
+        url += `?user_id=${encodeURIComponent(userId)}`;
+      }
     }
     
+    console.log('Making request to:', url);
     const response = await axios.get(url);
+    console.log('Response from verifyKiteToken:', response.data);
     return response.data;
   },
   

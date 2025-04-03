@@ -24,6 +24,9 @@ class DataProviderFactory:
         Returns:
             DataProvider: An instance of DataProvider
         """
+        # Enhanced debugging for parameters
+        self.logger.info(f"get_provider called with force_provider: '{force_provider}', user_id: '{user_id}' (type: {type(user_id).__name__})")
+        
         # If forcing a specific provider
         if force_provider is not None:
             self.logger.info(f"Forcing data provider: {force_provider}" + 
@@ -32,6 +35,8 @@ class DataProviderFactory:
             if force_provider.lower() == 'kite':
                 # For Kite provider, use the specified user ID (default to current user or "sushant")
                 current_user = user_id or self._provider_user or DEFAULT_KITE_USER
+                self.logger.info(f"Creating Kite provider with user_id: '{current_user}' (type: {type(current_user).__name__})")
+                self.logger.info(f"Original user_id: '{user_id}' (type: {type(user_id).__name__}), _provider_user: '{self._provider_user}', DEFAULT: '{DEFAULT_KITE_USER}'")
                 self._provider = KiteIntegration(user_id=current_user)
                 self._provider_name = 'kite'
                 self._provider_user = current_user
@@ -46,6 +51,8 @@ class DataProviderFactory:
             elif force_provider.lower().startswith('kite-'):
                 # Parse user ID from provider name (e.g., 'kite-satyam' -> 'satyam')
                 current_user = force_provider.lower().split('-', 1)[1]
+                self.logger.info(f"Extracted user '{current_user}' from provider name '{force_provider}'")
+                self.logger.info(f"Extracted user_id type: {type(current_user).__name__}")
                 self._provider = KiteIntegration(user_id=current_user)
                 self._provider_name = 'kite'
                 self._provider_user = current_user
@@ -87,12 +94,14 @@ class DataProviderFactory:
         
         # Add user info for Kite provider
         if self._provider_name == 'kite' and self._provider_user:
+            self.logger.info(f"Adding user_id to provider info: '{self._provider_user}' (type: {type(self._provider_user).__name__})")
             info["user_id"] = self._provider_user
             info["display_name"] = f"Kite-{self._provider_user.capitalize()}"
             
             # Add diagnostic info for troubleshooting
             self.logger.info(f"Current provider info - Name: {self._provider_name}, User: {self._provider_user}")
         
+        self.logger.info(f"Returning provider info: {info}")
         return info
     
     def test_provider(self, provider_name, user_id=None):

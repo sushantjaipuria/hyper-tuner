@@ -16,7 +16,25 @@ const KiteAuthModal = ({ isOpen, onClose, userId }) => {
   const [debugInfo, setDebugInfo] = useState({});
   
   // Get the effective user ID (from props or context)
-  const effectiveUserId = userId || currentKiteUser;
+  // Prevent the literal string 'true' from being used as a user ID
+  // Add debug logging to track the userId and type
+  logModalDebug('KiteAuthModal userId props and context:', {
+    userId: userId,
+    userIdType: typeof userId,
+    currentKiteUser: currentKiteUser,
+    currentKiteUserType: typeof currentKiteUser,
+    tokenValid: tokenValid,
+    requiresAuth: requiresAuth,
+    requiresAuthType: typeof requiresAuth
+  });
+  
+  const effectiveUserId = (userId === 'true' || userId === true) ? currentKiteUser : (userId || currentKiteUser);
+  
+  logModalDebug('effectiveUserId calculated as:', {
+    value: effectiveUserId,
+    type: typeof effectiveUserId,
+    calculation: `userId ${userId} → effectiveUserId ${effectiveUserId}`
+  });
   
   // Debug logging helper
   const logModalDebug = (message, data = null) => {
@@ -35,12 +53,18 @@ const KiteAuthModal = ({ isOpen, onClose, userId }) => {
     if (isOpen) {
       logModalDebug('Kite auth modal opened', { 
         tokenValid, 
-        requiresAuth, 
-        userId: effectiveUserId 
+        requiresAuth,
+        requiresAuthType: typeof requiresAuth,
+        userId: userId,
+        userIdType: typeof userId,
+        effectiveUserId: effectiveUserId,
+        effectiveUserIdType: typeof effectiveUserId,
+        currentKiteUser: currentKiteUser,
+        stackTrace: new Error().stack.split('\n').slice(1, 4).join('\n')
       });
       sessionStorage.setItem('kiteAuthModalOpened', new Date().toISOString());
     }
-  }, [isOpen, tokenValid, requiresAuth, effectiveUserId]);
+  }, [isOpen, tokenValid, requiresAuth, userId, effectiveUserId, currentKiteUser]);
   
   // When the modal is open, refresh debug info
   useEffect(() => {
@@ -77,7 +101,17 @@ const KiteAuthModal = ({ isOpen, onClose, userId }) => {
   }, [isOpen, debugVisible, tokenValid, requiresAuth, effectiveUserId]);
   
   const handleLoginClick = async () => {
-    logModalDebug('Login button clicked', { userId: effectiveUserId });
+    logModalDebug('Login button clicked', { 
+      userId: userId,
+      userIdType: typeof userId,
+      effectiveUserId: effectiveUserId, 
+      effectiveUserIdType: typeof effectiveUserId,
+      currentKiteUser: currentKiteUser,
+      tokenValid: tokenValid,
+      requiresAuth: requiresAuth,
+      requiresAuthType: typeof requiresAuth,
+      stackTrace: new Error().stack.split('\n').slice(1, 4).join('\n')
+    });
     setIsLoading(true);
     
     try {
@@ -88,11 +122,19 @@ const KiteAuthModal = ({ isOpen, onClose, userId }) => {
       }
       
       // Initiate authentication with user ID
+      logModalDebug('Calling initiateKiteAuth with:', {
+        effectiveUserId: effectiveUserId,
+        effectiveUserIdType: typeof effectiveUserId
+      });
       await initiateKiteAuth(effectiveUserId);
       logModalDebug('initiateKiteAuth completed', { userId: effectiveUserId });
       
     } catch (err) {
-      logModalDebug('Error during authentication', { error: err.message, userId: effectiveUserId });
+      logModalDebug('Error during authentication', { 
+        error: err.message, 
+        stack: err.stack,
+        userId: effectiveUserId 
+      });
     } finally {
       setIsLoading(false);
     }
@@ -107,14 +149,35 @@ const KiteAuthModal = ({ isOpen, onClose, userId }) => {
   };
   
   const handleManualCheck = async () => {
-    logModalDebug('Manual token check requested', { userId: effectiveUserId });
+    logModalDebug('Manual token check requested', { 
+      userId: userId,
+      userIdType: typeof userId,
+      effectiveUserId: effectiveUserId,
+      effectiveUserIdType: typeof effectiveUserId,
+      currentKiteUser: currentKiteUser,
+      stackTrace: new Error().stack.split('\n').slice(1, 4).join('\n')
+    });
     setIsLoading(true);
     
     try {
+      logModalDebug('Calling checkKiteToken for manual check with:', {
+        effectiveUserId: effectiveUserId,
+        effectiveUserIdType: typeof effectiveUserId,
+        force: true
+      });
       const result = await checkKiteToken(effectiveUserId, true);
-      logModalDebug('Manual token check completed', { valid: result, userId: effectiveUserId });
+      logModalDebug('Manual token check completed', { 
+        valid: result, 
+        userId: effectiveUserId, 
+        tokenValid: tokenValid,
+        requiresAuth: requiresAuth
+      });
     } catch (err) {
-      logModalDebug('Error checking token', { error: err.message, userId: effectiveUserId });
+      logModalDebug('Error checking token', { 
+        error: err.message, 
+        stack: err.stack,
+        userId: effectiveUserId 
+      });
     } finally {
       setIsLoading(false);
     }

@@ -84,8 +84,10 @@ def set_data_provider():
             logger.error("Missing provider name in request")
             return jsonify({"success": False, "error": "Missing provider name"}), 400
         
-        # Log the incoming request
-        logger.info(f"Setting data provider - Provider: {provider_name}, User: {user_id}")
+        # Enhanced logging about the request
+        logger.info(f"Setting data provider - Provider: {provider_name}, User: {user_id} (type: {type(user_id).__name__})")
+        logger.info(f"Full request data: {data}")
+        logger.info(f"Request headers: {dict([(k, v) for k, v in request.headers.items() if k.lower() not in ['cookie', 'authorization']])}")
         
         # Force the specified provider with user ID if applicable
         data_provider = provider_factory.get_provider(force_provider=provider_name, user_id=user_id)
@@ -99,9 +101,10 @@ def set_data_provider():
                 current_user = provider_name.lower().split('-', 1)[1]
                 
             logger.info(f"Checking if Kite authentication is required for user: {current_user or DEFAULT_KITE_USER}")
+            logger.info(f"Current user type: {type(current_user).__name__}")
             token_valid = data_provider.verify_token()
             requires_auth = not token_valid
-            logger.info(f"Kite token valid: {token_valid}, requires auth: {requires_auth}")
+            logger.info(f"Kite token valid: {token_valid}, requires auth: {requires_auth} (type: {type(requires_auth).__name__})")
         
         # Get detailed provider info
         provider_info = provider_factory.get_provider_info()
@@ -111,14 +114,18 @@ def set_data_provider():
         if provider_name.lower() == 'kite' and user_id and result_user != user_id:
             logger.warning(f"Provider user mismatch! Requested: {user_id}, Result: {result_user}")
         
-        # Return the provider info
-        return jsonify({
+        # Log the response we're about to send
+        response_data = {
             "success": True,
             "provider": provider_info.get("name"),
             "display_name": provider_info.get("display_name", provider_info.get("name")),
             "user_id": provider_info.get("user_id"),
             "requires_auth": requires_auth
-        })
+        }
+        logger.info(f"Responding to set-data-provider with: {response_data}")
+        
+        # Return the provider info
+        return jsonify(response_data)
     except Exception as e:
         logger.error(f"Error setting data provider: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
@@ -130,6 +137,11 @@ def get_kite_login_url():
     try:
         # Get user_id from query parameter
         user_id = request.args.get('user_id')
+        
+        # Add detailed debugging about user_id
+        logger.info(f"get_kite_login_url called with user_id: '{user_id}' (type: {type(user_id).__name__})")
+        logger.info(f"Request args: {dict(request.args)}")
+        logger.info(f"Request headers: {dict(request.headers)}")
         
         # Get Kite provider for the specified user
         kite_provider = provider_factory.get_provider(force_provider='kite', user_id=user_id)
@@ -429,6 +441,11 @@ def verify_kite_token():
     try:
         # Get user_id from query parameter
         user_id = request.args.get('user_id')
+        
+        # Add detailed debugging about user_id
+        logger.info(f"verify_kite_token called with user_id: '{user_id}' (type: {type(user_id).__name__})")
+        logger.info(f"Full request args: {dict(request.args)}")
+        logger.info(f"Referrer: {request.headers.get('Referer', 'None')}")
         
         # Get Kite provider for the specified user
         kite_provider = provider_factory.get_provider(force_provider='kite', user_id=user_id)
