@@ -1,5 +1,7 @@
 import pandas as pd
 import logging
+import os
+import json
 from kiteconnect import KiteConnect
 from datetime import datetime, timedelta
 from data_provider import DataProvider
@@ -151,22 +153,88 @@ class KiteIntegration(DataProvider):
                 
                 # Get data for each chunk and concatenate
                 all_data = []
+                debug_responses = []  # Store individual API responses for debugging
+                
                 for chunk_start, chunk_end in date_chunks:
+                    chunk_start_str = chunk_start.strftime('%Y-%m-%d')
+                    chunk_end_str = chunk_end.strftime('%Y-%m-%d')
+                    
+                    self.logger.info(f"KITE API REQUEST: Requesting data for {symbol} from {chunk_start_str} to {chunk_end_str}")
+                    
                     chunk_data = self.kite.historical_data(
                         instrument_token,
-                        from_date=chunk_start.strftime('%Y-%m-%d'),
-                        to_date=chunk_end.strftime('%Y-%m-%d'),
+                        from_date=chunk_start_str,
+                        to_date=chunk_end_str,
                         interval=kite_interval
                     )
+                    
+                    # Store response details for debugging
+                    debug_responses.append({
+                        "request": {
+                            "from_date": chunk_start_str,
+                            "to_date": chunk_end_str,
+                            "interval": kite_interval
+                        },
+                        "response_info": {
+                            "data_points": len(chunk_data),
+                            "first_date": chunk_data[0]["date"] if chunk_data else None,
+                            "last_date": chunk_data[-1]["date"] if chunk_data else None
+                        },
+                        "response_data": chunk_data  # Store actual response
+                    })
+                    
                     all_data.extend(chunk_data)
             else:
                 # For daily data, we can make a single request
+                debug_responses = []  # Initialize debug responses array
+                
+                self.logger.info(f"KITE API REQUEST: Requesting data for {symbol} from {start_date} to {end_date}")
+                
                 all_data = self.kite.historical_data(
                     instrument_token,
                     from_date=start_date,
                     to_date=end_date,
                     interval=kite_interval
                 )
+                
+                # Store response details for debugging
+                debug_responses.append({
+                    "request": {
+                        "from_date": start_date,
+                        "to_date": end_date,
+                        "interval": kite_interval
+                    },
+                    "response_info": {
+                        "data_points": len(all_data),
+                        "first_date": all_data[0]["date"] if all_data else None,
+                        "last_date": all_data[-1]["date"] if all_data else None
+                    },
+                    "response_data": all_data  # Store actual response
+                })
+                
+            # Create debug directory if it doesn't exist
+            debug_dir = os.path.join(os.path.dirname(__file__), 'debug')
+            if not os.path.exists(debug_dir):
+                os.makedirs(debug_dir)
+                
+            # Save raw API responses to JSON file
+            sanitized_symbol = ''.join(c if c.isalnum() else '_' for c in symbol)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            debug_file = os.path.join(debug_dir, f"kite_raw_response_{sanitized_symbol}_{start_date}_to_{end_date}.json")
+            
+            with open(debug_file, 'w') as f:
+                json.dump({
+                    "request_details": {
+                        "symbol": symbol,
+                        "timeframe": timeframe,
+                        "start_date": start_date,
+                        "end_date": end_date,
+                        "kite_interval": kite_interval
+                    },
+                    "responses": debug_responses
+                }, f, indent=2, default=str)  # Use default=str to handle datetime objects
+                
+            self.logger.info(f"KITE API DEBUG: Raw API responses saved to {debug_file}")
             
             # Convert to DataFrame
             df = pd.DataFrame(all_data)
@@ -183,6 +251,13 @@ class KiteIntegration(DataProvider):
             
             # Set datetime as index
             df.set_index('datetime', inplace=True)
+            
+            # Debug: Log actual date range
+            if not df.empty:
+                actual_start = df.index.min().strftime('%Y-%m-%d') if hasattr(df.index.min(), 'strftime') else str(df.index.min())
+                actual_end = df.index.max().strftime('%Y-%m-%d') if hasattr(df.index.max(), 'strftime') else str(df.index.max())
+                self.logger.info(f"KITE DATA RANGE: Requested period from {start_date} to {end_date}")
+                self.logger.info(f"KITE DATA RANGE: Actual data from {actual_start} to {actual_end}")
             
             return df
         

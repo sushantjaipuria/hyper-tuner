@@ -218,6 +218,13 @@ class BacktestEngine:
             self.logger.info(f"BACKTEST ENGINE END: Completed backtest from {start_date} to {end_date}")
             self.logger.info(f"BACKTEST ENGINE END: Backtest completed with initial_capital={initial_capital}, final_value={portfolio_value}, returns={returns:.2f}%")
             
+            # Add additional summary of data range used
+            if not data.empty:
+                data_start = data.index.min().strftime('%Y-%m-%d') if hasattr(data.index.min(), 'strftime') else str(data.index.min())
+                data_end = data.index.max().strftime('%Y-%m-%d') if hasattr(data.index.max(), 'strftime') else str(data.index.max())
+                self.logger.info(f"BACKTEST DATA SUMMARY: Data used for backtest spans from {data_start} to {data_end}")
+                self.logger.info(f"BACKTEST DATA SUMMARY: Contains {len(data)} data points for symbol {symbol}")
+            
             # Get all trades
             trades = []
             try:
