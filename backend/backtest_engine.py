@@ -3,19 +3,32 @@ import numpy as np
 import backtrader as bt
 import uuid
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 import tempfile
 import os
+import json
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+import base64
+import io
 
 from indicators import Indicators
+from data_provider import DataProvider
+from utils import safe_strftime, format_date_for_api, log_date_conversion
 
 class BacktestEngine:
     """Class to handle backtesting of trading strategies"""
     
     def __init__(self, data_provider):
-        """Initialize the Backtest Engine"""
-        self.logger = logging.getLogger(__name__)
+        """
+        Initialize the backtest engine with a data provider
+        
+        Args:
+            data_provider (DataProvider): An instance of a class implementing the DataProvider interface
+        """
         self.data_provider = data_provider
+        self.logger = logging.getLogger(__name__)
+        self.logger.info("BacktestEngine initialized")
         self.indicators = Indicators()
     
     def _safe_to_list(self, value):
@@ -366,19 +379,40 @@ class BacktestEngine:
             return None
             
         try:
-            # If it's already a string, return as is
+            # If it's already a string, log and return as is
             if isinstance(dt_value, str):
-                return dt_value
+                return log_date_conversion(
+                    dt_value,
+                    dt_value,
+                    "string datetime passthrough",
+                    extra_info={"context": "backtest_engine_format_datetime"}
+                )
                 
-            # If it's a datetime object, format it
+            # If it's a datetime object, format it using our utility
             if isinstance(dt_value, datetime):
-                return dt_value.strftime('%Y-%m-%d %H:%M:%S')
+                return safe_strftime(
+                    dt_value, 
+                    '%Y-%m-%d %H:%M:%S',
+                    extra_info={"context": "backtest_engine_format_datetime"}
+                )
                 
-            # Try to convert other types to string
-            return str(dt_value)
+            # Try to convert other types to string with logging
+            result = str(dt_value)
+            return log_date_conversion(
+                dt_value,
+                result,
+                f"conversion of {type(dt_value).__name__} to string",
+                extra_info={"context": "backtest_engine_format_datetime"}
+            )
         except Exception as e:
             self.logger.warning(f"Error formatting datetime: {str(e)}")
-            return str(dt_value) if dt_value is not None else None
+            result = str(dt_value) if dt_value is not None else None
+            return log_date_conversion(
+                dt_value,
+                result,
+                "fallback string conversion after error",
+                extra_info={"error": str(e), "context": "backtest_engine_format_datetime"}
+            )
     
     def _create_bt_strategy_class(self, strategy_type, entry_conditions, exit_conditions, stop_loss=0, target_profit=0):
         """

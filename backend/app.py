@@ -5,7 +5,9 @@ import logging
 import numpy as np
 import csv
 import io
+import os
 from datetime import datetime
+from logging.handlers import TimedRotatingFileHandler
 from config import (
     load_kite_config, save_kite_config, update_kite_access_token,
     get_available_kite_users, DEFAULT_KITE_USER
@@ -18,10 +20,43 @@ from optimizer import Optimizer
 from data_provider_factory import provider_factory
 from indicators import Indicators
 from kite_integration import KiteIntegration
+from utils import safe_strptime, safe_strftime, format_date_for_api, log_date_conversion
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# Ensure debug directory exists
+debug_dir = os.path.join(os.path.dirname(__file__), 'debug')
+if not os.path.exists(debug_dir):
+    os.makedirs(debug_dir)
+
+# Configure logging with both console and file handlers
+log_file_path = os.path.join(debug_dir, 'app.log')
+log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+
+# Create formatter
+formatter = logging.Formatter(log_format)
+
+# Configure root logger
+logging.basicConfig(level=logging.INFO, format=log_format)
 logger = logging.getLogger(__name__)
+
+# Remove any existing handlers to avoid duplication
+for handler in logger.handlers[:]:
+    logger.removeHandler(handler)
+    
+# Add console handler
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
+
+# Add file handler with daily rotation
+file_handler = TimedRotatingFileHandler(
+    log_file_path, 
+    when='midnight',
+    backupCount=7  # Keep logs for a week
+)
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
+
+logger.info(f"Logging configured: Console and file logging to {log_file_path}")
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -1040,6 +1075,11 @@ def run_backtest():
         end_date = data.get('end_date')
         initial_capital = data.get('initial_capital', 100000)
         
+        # Check if this is a request from the "Run Backtest & Continue" button (special marker)
+        is_debug_request = data.get('_debug_date_tracking', False)
+        if is_debug_request:
+            logger.info(f"DATE_DEBUG - Detected request from 'Run Backtest & Continue' button")
+        
         # Enhanced debug logging for date debugging
         logger.info(f"DATE_DEBUG - RECEIVED FROM FRONTEND: Raw start_date='{start_date}', end_date='{end_date}'")
         logger.info(f"DATE_DEBUG - TYPES: start_date type={type(start_date).__name__}, end_date type={type(end_date).__name__}")
@@ -1065,7 +1105,8 @@ def run_backtest():
                     "start_date": start_date,
                     "end_date": end_date,
                     "strategy_id": strategy_id,
-                    "initial_capital": data.get('initial_capital')
+                    "initial_capital": data.get('initial_capital'),
+                    "_debug_date_tracking": is_debug_request
                 },
                 "headers": {k: v for k, v in request.headers.items() if k.lower() not in ['cookie', 'authorization']},
                 "server_info": {
@@ -1081,9 +1122,17 @@ def run_backtest():
             return jsonify({"success": False, "error": "Start date and end date are required"}), 400
         
         try:
-            # Validate dates format
-            datetime.strptime(start_date, '%Y-%m-%d')
-            datetime.strptime(end_date, '%Y-%m-%d')
+            # Validate dates format with enhanced logging
+            parsed_start = safe_strptime(
+                start_date, 
+                '%Y-%m-%d', 
+                extra_info={"source": "frontend", "context": "backtest_start_date_validation"}
+            )
+            parsed_end = safe_strptime(
+                end_date, 
+                '%Y-%m-%d', 
+                extra_info={"source": "frontend", "context": "backtest_end_date_validation"}
+            )
         except ValueError as date_err:
             logger.error(f"Invalid date format: {str(date_err)}")
             return jsonify({"success": False, "error": f"Invalid date format. Use YYYY-MM-DD format: {str(date_err)}"}), 400
@@ -1093,15 +1142,18 @@ def run_backtest():
             logger.info(f"Running backtest for strategy {strategy_id} from {start_date} to {end_date}")
             logger.debug(f"Strategy: {strategy}")
             
-            # Additional debug logging for date parsing
+            # Additional debug logging for date parsing - using our new utility
             try:
-                # Parse the dates manually and log
-                parsed_start = datetime.strptime(start_date, '%Y-%m-%d')
-                parsed_end = datetime.strptime(end_date, '%Y-%m-%d')
+                # Log the parsed dates using our utility
+                logger.info(f"DATE_DEBUG - PARSED DATES: start={safe_strftime(parsed_start, '%Y-%m-%d')}, end={safe_strftime(parsed_end, '%Y-%m-%d')}")
                 
-                logger.info(f"DATE_DEBUG - PARSED DATES: start={parsed_start.strftime('%Y-%m-%d')}, end={parsed_end.strftime('%Y-%m-%d')}")
-                logger.info(f"DATE_DEBUG - UTC COMPARISON: original_start={start_date}, utc_start={parsed_start.strftime('%Y-%m-%d')}")
-                logger.info(f"DATE_DEBUG - UTC COMPARISON: original_end={end_date}, utc_end={parsed_end.strftime('%Y-%m-%d')}")
+                # Get current UTC time for comparison
+                utc_now = datetime.utcnow()
+                logger.info(f"DATE_DEBUG - CURRENT UTC TIME: {utc_now.isoformat()}")
+                
+                # Compare with original strings
+                logger.info(f"DATE_DEBUG - UTC COMPARISON: original_start={start_date}, utc_start={safe_strftime(parsed_start, '%Y-%m-%d')}")
+                logger.info(f"DATE_DEBUG - UTC COMPARISON: original_end={end_date}, utc_end={safe_strftime(parsed_end, '%Y-%m-%d')}")
             except Exception as e:
                 logger.error(f"DATE_DEBUG - DATE PARSING ERROR: {str(e)}")
             
@@ -1122,6 +1174,19 @@ def run_backtest():
             
             # Create a new backtest engine with the current provider
             current_backtest_engine = BacktestEngine(current_data_provider)
+            
+            # Log that we're about to pass these dates to the backtest engine
+            log_date_conversion(
+                [start_date, end_date],
+                [start_date, end_date],
+                "Passing dates to backtest engine",
+                extra_info={
+                    "strategy_id": strategy_id,
+                    "provider": current_provider_name,
+                    "parsed_start": parsed_start.isoformat() if parsed_start else None,
+                    "parsed_end": parsed_end.isoformat() if parsed_end else None
+                }
+            )
             
             backtest_results = current_backtest_engine.run_backtest(
                 strategy, 

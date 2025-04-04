@@ -39,9 +39,9 @@ const BacktestParameters = ({ backtestParams, onSubmit, loading }) => {
   
   // Handle form submission
   const handleSubmit = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     
-    // Validate form
+    // Validation
     const formErrors = {};
     
     if (!initialCapital || initialCapital <= 0) {
@@ -56,7 +56,7 @@ const BacktestParameters = ({ backtestParams, onSubmit, loading }) => {
       formErrors.endDate = 'End date is required';
     }
     
-    if (startDate && endDate && startDate >= endDate) {
+    if (startDate && endDate && startDate > endDate) {
       formErrors.dateRange = 'End date must be after start date';
     }
     
@@ -74,7 +74,10 @@ const BacktestParameters = ({ backtestParams, onSubmit, loading }) => {
         originalToString: String(startDate),
         originalToISOString: startDate instanceof Date ? startDate.toISOString() : 'Not a Date object',
         originalGetTime: startDate instanceof Date ? startDate.getTime() : 'Not a Date object',
-        timezoneOffset: startDate instanceof Date ? startDate.getTimezoneOffset() : 'Not a Date object'
+        timezoneOffset: startDate instanceof Date ? startDate.getTimezoneOffset() : 'Not a Date object',
+        localDateString: startDate instanceof Date ? startDate.toLocaleDateString() : 'Not a Date object',
+        currentTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        browserLocale: navigator.language || navigator.userLanguage
       },
       endDate: {
         rawValue: endDate,
@@ -83,7 +86,8 @@ const BacktestParameters = ({ backtestParams, onSubmit, loading }) => {
         originalToString: String(endDate),
         originalToISOString: endDate instanceof Date ? endDate.toISOString() : 'Not a Date object',
         originalGetTime: endDate instanceof Date ? endDate.getTime() : 'Not a Date object',
-        timezoneOffset: endDate instanceof Date ? endDate.getTimezoneOffset() : 'Not a Date object'
+        timezoneOffset: endDate instanceof Date ? endDate.getTimezoneOffset() : 'Not a Date object',
+        localDateString: endDate instanceof Date ? endDate.toLocaleDateString() : 'Not a Date object'
       }
     });
     
@@ -91,19 +95,40 @@ const BacktestParameters = ({ backtestParams, onSubmit, loading }) => {
     const formattedStartDate = startDate.toISOString().split('T')[0];
     const formattedEndDate = endDate.toISOString().split('T')[0];
     
-    // Debug log formatted dates
+    // Debug log formatted dates with enhanced info
     console.log('DATE_DEBUG - User selected dates after formatting:', {
       startDate: {
         displayValue: formattedStartDate,
         rawValue: startDate,
         originalISOString: startDate.toISOString(),
-        formattingMethod: 'toISOString().split(\'T\')[0]'
+        formattingMethod: 'toISOString().split(\'T\')[0]',
+        dateParts: {
+          year: startDate.getFullYear(),
+          month: startDate.getMonth() + 1, // +1 because getMonth() is 0-indexed
+          day: startDate.getDate(),
+          hours: startDate.getHours(),
+          minutes: startDate.getMinutes(),
+          seconds: startDate.getSeconds()
+        }
       },
       endDate: {
         displayValue: formattedEndDate,
         rawValue: endDate,
         originalISOString: endDate.toISOString(),
-        formattingMethod: 'toISOString().split(\'T\')[0]'
+        formattingMethod: 'toISOString().split(\'T\')[0]',
+        dateParts: {
+          year: endDate.getFullYear(),
+          month: endDate.getMonth() + 1, // +1 because getMonth() is 0-indexed
+          day: endDate.getDate(),
+          hours: endDate.getHours(),
+          minutes: endDate.getMinutes(),
+          seconds: endDate.getSeconds()
+        }
+      },
+      dateInfo: {
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        locale: navigator.language,
+        browserDateTime: new Date().toString()
       }
     });
     
@@ -111,14 +136,18 @@ const BacktestParameters = ({ backtestParams, onSubmit, loading }) => {
     const backtestData = {
       initial_capital: Number(initialCapital),
       start_date: formattedStartDate,
-      end_date: formattedEndDate
+      end_date: formattedEndDate,
+      // Add a special marker for backend to detect this is from the Run Backtest button
+      _debug_date_tracking: true
     };
     
     // Debug log final data being sent to backend
     console.log('DATE_DEBUG - Dates being sent to backend:', {
       startDate: formattedStartDate,
       endDate: formattedEndDate,
-      fullRequestBody: backtestData
+      fullRequestBody: backtestData,
+      runTimestamp: new Date().toISOString(),
+      sourceButtonId: 'run-backtest-continue'
     });
     
     // Submit backtest parameters
@@ -230,6 +259,7 @@ const BacktestParameters = ({ backtestParams, onSubmit, loading }) => {
             type="submit"
             className="bg-blue-700 text-white px-6 py-3 rounded font-medium flex items-center disabled:bg-blue-300"
             disabled={loading}
+            id="run-backtest-continue"
           >
             {loading ? 'Running Backtest...' : 'Run Backtest & Continue'}
           </button>

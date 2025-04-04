@@ -6,6 +6,7 @@ from kiteconnect import KiteConnect
 from datetime import datetime, timedelta
 from data_provider import DataProvider
 from config import load_kite_config, save_kite_config, update_kite_access_token, DEFAULT_KITE_USER
+from utils import safe_strptime, safe_strftime, format_date_for_api, log_date_conversion
 
 class KiteIntegration(DataProvider):
     """Class to handle integration with Zerodha Kite API, implementing the DataProvider interface"""
@@ -122,21 +123,76 @@ class KiteIntegration(DataProvider):
             
             kite_interval = interval_mapping.get(timeframe, timeframe)
             
-            # Convert dates to datetime objects
-            start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
-            end_date_obj = datetime.strptime(end_date, '%Y-%m-%d')
+            # Log that we're about to convert dates using our utility
+            log_date_conversion(
+                [start_date, end_date],
+                [start_date, end_date],
+                "Processing dates for Kite API",
+                extra_info={
+                    "symbol": symbol,
+                    "timeframe": timeframe,
+                    "kite_interval": kite_interval
+                }
+            )
+            
+            # Convert dates to datetime objects with enhanced logging
+            start_date_obj = safe_strptime(
+                start_date, 
+                '%Y-%m-%d',
+                extra_info={"context": "kite_historical_data_start_date"}
+            )
+            end_date_obj = safe_strptime(
+                end_date, 
+                '%Y-%m-%d',
+                extra_info={"context": "kite_historical_data_end_date"}
+            )
             
             # TEMPORARY FIX: Add one day to dates to compensate for date mismatch issue
             # We need to investigate the root cause, but this ensures correct date ranges for now
-            self.logger.info(f"KITE DATE FIX: Original dates - start: {start_date_obj.strftime('%Y-%m-%d')}, end: {end_date_obj.strftime('%Y-%m-%d')}")
+            self.logger.info(f"KITE DATE FIX: Original dates - start: {safe_strftime(start_date_obj, '%Y-%m-%d')}, end: {safe_strftime(end_date_obj, '%Y-%m-%d')}")
+            
+            # Log before adjustment
+            pre_adjustment_dates = {
+                "start_date_obj": start_date_obj.isoformat(),
+                "end_date_obj": end_date_obj.isoformat()
+            }
+            
             start_date_obj += timedelta(days=1)
             end_date_obj += timedelta(days=1)
-            self.logger.info(f"KITE DATE FIX: Adjusted dates (added 1 day) - start: {start_date_obj.strftime('%Y-%m-%d')}, end: {end_date_obj.strftime('%Y-%m-%d')}")
+            
+            # Log after adjustment using our utility
+            log_date_conversion(
+                pre_adjustment_dates,
+                {
+                    "adjusted_start_date_obj": start_date_obj.isoformat(),
+                    "adjusted_end_date_obj": end_date_obj.isoformat()
+                },
+                "Date adjustment (+1 day) for Kite API",
+                extra_info={
+                    "reason": "Compensating for date mismatch issue in Kite API",
+                    "symbol": symbol,
+                    "timeframe": timeframe
+                }
+            )
+            
+            self.logger.info(f"KITE DATE FIX: Adjusted dates (added 1 day) - start: {safe_strftime(start_date_obj, '%Y-%m-%d')}, end: {safe_strftime(end_date_obj, '%Y-%m-%d')}")
             
             # Add market hours time components for Kite API format
             # Indian market opens at 09:15 and closes at 15:15
-            start_date_time = start_date_obj.strftime('%Y-%m-%d') + ' 09:15:00'  # Market open time
-            end_date_time = end_date_obj.strftime('%Y-%m-%d') + ' 15:15:00'  # Market close time
+            start_date_time = safe_strftime(start_date_obj, '%Y-%m-%d') + ' 09:15:00'  # Market open time
+            end_date_time = safe_strftime(end_date_obj, '%Y-%m-%d') + ' 15:15:00'  # Market close time
+            
+            # Log the full date formatting
+            log_date_conversion(
+                [safe_strftime(start_date_obj, '%Y-%m-%d'), safe_strftime(end_date_obj, '%Y-%m-%d')],
+                [start_date_time, end_date_time],
+                "Adding time components for Kite API",
+                extra_info={
+                    "symbol": symbol,
+                    "market_open": "09:15:00",
+                    "market_close": "15:15:00"
+                }
+            )
             
             self.logger.info(f"KITE DATE FORMAT: Converting dates from {start_date}/{end_date} to {start_date_time}/{end_date_time}")
             
