@@ -1,64 +1,29 @@
-# Debug Logs
+# Strategy Debug Directory
 
-This directory contains log files and debug information for the Hyper-Tuner application. These files are useful for diagnosing issues, particularly related to date handling and API requests.
+This directory contains debug files that capture the state of trading strategies as they are executed by the backtest engine.
 
-## Log Files
+## Debug File Format
 
-- `app.log` - Main application log file that captures all console logs
-- `app.log.YYYY-MM-DD` - Rotated log files (one per day)
+Each debug file is a Markdown (.md) file that contains:
 
-## Log Filtering System
+1. **Original User-Defined Strategy** - The strategy configuration as defined by the user
+2. **Backtrader Strategy Information** - How the strategy was translated for Backtrader
+3. **Dynamically Created Backtrader Strategy Class** - The actual Python code of the strategy class
+4. **Backtest Results** - A summary of the backtest execution results and trades
 
-The application uses a special logging configuration that filters certain log messages:
+## Filename Format
 
-- **Console Output**: All logs EXCEPT those containing "DATE_CONVERSION" are displayed in the console. This provides a cleaner development experience by reducing console noise.
-- **Log Files**: ALL logs, including "DATE_CONVERSION" messages, are saved to the log files for comprehensive debugging.
+Debug files follow this naming convention:
+`{strategy_id}_{timestamp}_{debug_id}_debug.md`
 
-This means that date conversion logs are only visible in the log files, not in the console.
+## Purpose
 
-## Debug Files
+These files are useful for:
+- Understanding how user-defined strategies are translated into Backtrader classes
+- Debugging issues with strategy execution
+- Comparing different strategy implementations
+- Analyzing backtest results in detail
 
-Several types of debug files are generated automatically:
+## Manual Generation
 
-- `backtest_request_debug_*.json` - Request data for backtest API calls
-- `backtest_results_debug_*.json` - Results from backtest operations
-- `kite_raw_response_*.json` - Raw responses from Kite API calls
-
-## Date Conversion Logging
-
-All date/datetime conversions are logged in detail with:
-- Input and output values
-- Type information
-- Source location
-- Context information
-- Timezone details
-
-## Special Debugging Features
-
-The following markers in logs indicate special debugging information:
-
-- `DATE_DEBUG` - Date-related debugging information (visible in console and log file)
-- `DATE_CONVERSION` - Logs from the date conversion utility (only visible in log file)
-- `KITE DATE FIX` - Information about date adjustments for Kite API
-- `KITE API REQUEST` - Details of requests to the Kite API
-
-## Adding Useful Debug Information
-
-When working with dates and times, please use the utility functions in `utils.py`:
-
-- `safe_strptime()` - For converting strings to datetime objects
-- `safe_strftime()` - For converting datetime objects to strings
-- `format_date_for_api()` - For formatting dates specifically for API use
-- `log_date_conversion()` - Low-level function for logging date conversions
-
-These functions will automatically add useful context to the logs.
-
-## Testing the Logging Configuration
-
-You can verify the logging configuration is working correctly by running:
-
-```
-python3 test_logging.py
-```
-
-This will generate various log messages, including DATE_CONVERSION logs that will only appear in the log file. 
+You can manually generate a debug file by running a backtest through the API or UI.

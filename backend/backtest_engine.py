@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import base64
 import io
+from debug_utils import save_strategy_debug_info, save_strategy_comparison
 
 from indicators import Indicators
 from data_provider import DataProvider
@@ -31,6 +32,14 @@ class BacktestEngine:
         self.logger = get_logger(__name__)
         self.logger.info("BacktestEngine initialized")
         self.indicators = Indicators()
+        
+        # For tracking Backtrader's interpretation of strategies
+        self.backtrader_interpretation = {
+            'strategy_params': {},
+            'indicators': {},
+            'data_feed': {},
+            'conditions': {}
+        }
     
     def _safe_to_list(self, value):
         """
@@ -78,6 +87,14 @@ class BacktestEngine:
             # Add debug logging for dates and initial capital at the start
             self.logger.info(f"BACKTEST ENGINE START: Backtesting period from {start_date} to {end_date}")
             self.logger.info(f"BACKTEST ENGINE START: Using initial_capital={initial_capital} (type: {type(initial_capital).__name__})")
+            
+            # Reset backtrader interpretation for this run
+            self.backtrader_interpretation = {
+                'strategy_params': {},
+                'indicators': {},
+                'data_feed': {},
+                'conditions': {}
+            }
             
             # Get strategy details
             strategy_id = strategy['strategy_id']
@@ -129,6 +146,39 @@ class BacktestEngine:
             
             self.logger.info(f"Adding {len(indicator_configs)} indicators to data")
             data_with_indicators = self.indicators.add_all_indicators(data, indicator_configs)
+            
+            # Track indicator processing for debugging
+            indicator_processing = {}
+            for condition in indicator_configs:
+                if 'indicator' in condition and 'variable' in condition:
+                    indicator = condition['indicator']
+                    variable = condition['variable']
+                    params = condition.get('params', {})
+                    
+                    # For debugging, get sanitized variable name that might have been used
+                    safe_var_name = ''.join(c if c.isalnum() or c == '_' else '_' for c in variable)
+                    if not safe_var_name[0].isalpha() and safe_var_name[0] != '_':
+                        safe_var_name = 'ind_' + safe_var_name
+                    
+                    # Check both variable names
+                    if variable in data_with_indicators.columns:
+                        actual_var = variable
+                    elif safe_var_name in data_with_indicators.columns:
+                        actual_var = safe_var_name
+                    else:
+                        actual_var = None
+                    
+                    indicator_processing[variable] = {
+                        'indicator_type': indicator,
+                        'parameters': params,
+                        'column_name': variable,
+                        'sanitized_name': safe_var_name,
+                        'found_in_data': actual_var is not None,
+                        'actual_column': actual_var,
+                        'sample_values': data_with_indicators[actual_var].head(3).tolist() if actual_var is not None and not data_with_indicators.empty else []
+                    }
+            
+            self.backtrader_interpretation['indicators'] = indicator_processing
             
             # Validate that all required indicators were added
             entry_indicator_vars = []
@@ -192,6 +242,9 @@ class BacktestEngine:
                     stop_loss, 
                     target_profit
                 )
+                
+                # We'll save debug information at the end after we have results
+                
             except Exception as e:
                 self.logger.error(f"Failed to create Backtrader strategy class: {str(e)}")
                 raise ValueError(f"Failed to create strategy class: {str(e)}. Please check your strategy configuration.")
@@ -331,6 +384,18 @@ class BacktestEngine:
             }
                 
                 self.logger.info(f"Backtest completed: Returns: {returns:.2f}%, Win Rate: {win_rate:.2f}, Sharpe: {sharpe_ratio:.2f}")
+                
+                # Now save strategy comparison with the results
+                self.logger.info("Saving strategy comparison...")
+                debug_file = save_strategy_comparison(
+                    strategy, 
+                    bt_strategy_class, 
+                    self.backtrader_interpretation,
+                    self.logger, 
+                    backtest_results
+                )
+                self.logger.info(f"Strategy comparison saved to {debug_file}")
+                
                 return backtest_results
             except Exception as e:
                 self.logger.error(f"Error preparing backtest results: {str(e)}")
@@ -423,10 +488,76 @@ class BacktestEngine:
             strategy_type (str): Strategy type (buy or sell)
             entry_conditions (list): List of entry conditions
             exit_conditions (list): List of exit conditions
+            stop_loss (float): Stop loss percentage
+            target_profit (float): Target profit percentage
             
         Returns:
             backtrader.Strategy: Backtrader strategy class
         """
+        # Store the strategy parameters for debug purposes
+        strategy_params = {
+            'strategy_type': strategy_type,
+            'entry_conditions': entry_conditions,
+            'exit_conditions': exit_conditions,
+            'stop_loss': stop_loss,
+            'target_profit': target_profit
+        }
+        
+        # Track how Backtrader interprets the strategy
+        self.backtrader_interpretation['strategy_params'] = strategy_params
+        
+        # Track how entry and exit conditions are interpreted
+        entry_interpretation = []
+        for condition in entry_conditions:
+            if 'indicator' in condition:
+                if 'variable' in condition:
+                    # This is an indicator initialization
+                    entry_interpretation.append({
+                        'type': 'indicator_setup',
+                        'indicator': condition.get('indicator'),
+                        'variable': condition.get('variable'),
+                        'params': condition.get('params', {})
+                    })
+            elif 'comparison' in condition or 'condition' in condition:
+                # This is a comparison condition
+                entry_interpretation.append({
+                    'type': 'comparison',
+                    'variable': condition.get('variable', ''),
+                    'comparison': condition.get('comparison', condition.get('condition', '')),
+                    'threshold': condition.get('threshold', 0),
+                    'action': condition.get('action', '')
+                })
+        
+        exit_interpretation = []
+        for condition in exit_conditions:
+            if 'indicator' in condition:
+                if 'variable' in condition:
+                    # This is an indicator initialization
+                    exit_interpretation.append({
+                        'type': 'indicator_setup',
+                        'indicator': condition.get('indicator'),
+                        'variable': condition.get('variable'),
+                        'params': condition.get('params', {})
+                    })
+            elif 'comparison' in condition or 'condition' in condition:
+                # This is a comparison condition
+                exit_interpretation.append({
+                    'type': 'comparison',
+                    'variable': condition.get('variable', ''),
+                    'comparison': condition.get('comparison', condition.get('condition', '')),
+                    'threshold': condition.get('threshold', 0),
+                    'action': condition.get('action', '')
+                })
+        
+        self.backtrader_interpretation['conditions'] = {
+            'entry_interpretation': entry_interpretation,
+            'exit_interpretation': exit_interpretation,
+            'backtrader_translation': {
+                'strategy_type': 'BUY' if strategy_type == 'buy' else 'SELL',
+                'stop_loss_handling': f"{stop_loss}% stop loss will trigger exit" if stop_loss > 0 else "No stop loss",
+                'take_profit_handling': f"{target_profit}% profit target will trigger exit" if target_profit > 0 else "No take profit"
+            }
+        }
         # Define a custom strategy class
         class CustomStrategy(bt.Strategy):
             def __init__(self):
@@ -905,6 +1036,8 @@ class BacktestEngine:
         
         # Collect indicator columns (non-OHLC columns)
         indicator_columns = []
+        data_feed_indicators = {}
+        
         for column in data.columns:
             # Skip standard OHLCV columns 
             if column not in ['open', 'high', 'low', 'close', 'volume']:
@@ -918,6 +1051,19 @@ class BacktestEngine:
                 
                 self.logger.debug(f"Adding indicator column: {column} as {col_name}")
                 indicator_columns.append((col_name, column))
+                
+                # Track for debugging
+                data_feed_indicators[column] = {
+                    'backtrader_name': col_name,
+                    'sample_values': data[column].head(3).tolist() if not data.empty else []
+                }
+        
+        # Store data feed configuration for debugging
+        self.backtrader_interpretation['data_feed'] = {
+            'columns': list(data.columns),
+            'indicator_mappings': dict(indicator_columns),
+            'indicator_samples': data_feed_indicators
+        }
         
         self.logger.info(f"Identified {len(indicator_columns)} indicator columns to add to data feed")
         if indicator_columns:
