@@ -126,6 +126,13 @@ class KiteIntegration(DataProvider):
             start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
             end_date_obj = datetime.strptime(end_date, '%Y-%m-%d')
             
+            # TEMPORARY FIX: Add one day to dates to compensate for date mismatch issue
+            # We need to investigate the root cause, but this ensures correct date ranges for now
+            self.logger.info(f"KITE DATE FIX: Original dates - start: {start_date_obj.strftime('%Y-%m-%d')}, end: {end_date_obj.strftime('%Y-%m-%d')}")
+            start_date_obj += timedelta(days=1)
+            end_date_obj += timedelta(days=1)
+            self.logger.info(f"KITE DATE FIX: Adjusted dates (added 1 day) - start: {start_date_obj.strftime('%Y-%m-%d')}, end: {end_date_obj.strftime('%Y-%m-%d')}")
+            
             # Add market hours time components for Kite API format
             # Indian market opens at 09:15 and closes at 15:15
             start_date_time = start_date_obj.strftime('%Y-%m-%d') + ' 09:15:00'  # Market open time
@@ -163,9 +170,14 @@ class KiteIntegration(DataProvider):
                 debug_responses = []  # Store individual API responses for debugging
                 
                 for chunk_start, chunk_end in date_chunks:
+                    # TEMPORARY FIX: Add one day adjustment to chunk dates as well
+                    chunk_start_with_fix = chunk_start + timedelta(days=1)
+                    chunk_end_with_fix = chunk_end + timedelta(days=1)
+                    self.logger.info(f"KITE DATE FIX CHUNK: Original: {chunk_start.strftime('%Y-%m-%d')} to {chunk_end.strftime('%Y-%m-%d')}, Adjusted: {chunk_start_with_fix.strftime('%Y-%m-%d')} to {chunk_end_with_fix.strftime('%Y-%m-%d')}")
+                    
                     # Format dates with market hours (09:15 for start, 15:15 for end)
-                    chunk_start_str = chunk_start.strftime('%Y-%m-%d') + ' 09:15:00'  # Market open time
-                    chunk_end_str = chunk_end.strftime('%Y-%m-%d') + ' 15:15:00'    # Market close time
+                    chunk_start_str = chunk_start_with_fix.strftime('%Y-%m-%d') + ' 09:15:00'  # Market open time
+                    chunk_end_str = chunk_end_with_fix.strftime('%Y-%m-%d') + ' 15:15:00'    # Market close time
                     
                     self.logger.info(f"KITE API REQUEST: Requesting data for {symbol} from {chunk_start_str} to {chunk_end_str}")
                     
@@ -235,14 +247,17 @@ class KiteIntegration(DataProvider):
             with open(debug_file, 'w') as f:
                 json.dump({
                     "request_details": {
-                        "symbol": symbol,
-                        "timeframe": timeframe,
-                        "start_date": start_date,
-                        "end_date": end_date,
-                        "kite_interval": kite_interval,
-                        "formatted_start_date": start_date_time,
-                        "formatted_end_date": end_date_time
-                    },
+                    "symbol": symbol,
+                    "timeframe": timeframe,
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "kite_interval": kite_interval,
+                    "formatted_start_date": start_date_time,
+                    "formatted_end_date": end_date_time,
+                        "_date_adjustment": "Added 1 day to fix date mismatch issue",
+                    "_original_start_date": datetime.strptime(start_date, '%Y-%m-%d').strftime('%Y-%m-%d'),
+                    "_original_end_date": datetime.strptime(end_date, '%Y-%m-%d').strftime('%Y-%m-%d')
+                },
                     "responses": debug_responses
                 }, f, indent=2, default=str)  # Use default=str to handle datetime objects
                 
@@ -268,7 +283,8 @@ class KiteIntegration(DataProvider):
             if not df.empty:
                 actual_start = df.index.min().strftime('%Y-%m-%d %H:%M:%S') if hasattr(df.index.min(), 'strftime') else str(df.index.min())
                 actual_end = df.index.max().strftime('%Y-%m-%d %H:%M:%S') if hasattr(df.index.max(), 'strftime') else str(df.index.max())
-                self.logger.info(f"KITE DATA RANGE: Requested period from {start_date} to {end_date}")
+                self.logger.info(f"KITE DATA RANGE: Originally requested period from {start_date} to {end_date}")
+                self.logger.info(f"KITE DATA RANGE: After +1 day adjustment, requested {start_date_obj.strftime('%Y-%m-%d')} to {end_date_obj.strftime('%Y-%m-%d')}")
                 self.logger.info(f"KITE DATA RANGE: With time components, requested {start_date_time} to {end_date_time}")
                 self.logger.info(f"KITE DATA RANGE: Actual data received from {actual_start} to {actual_end}")
                 
