@@ -126,6 +126,13 @@ class KiteIntegration(DataProvider):
             start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
             end_date_obj = datetime.strptime(end_date, '%Y-%m-%d')
             
+            # Add market hours time components for Kite API format
+            # Indian market opens at 09:15 and closes at 15:15
+            start_date_time = start_date_obj.strftime('%Y-%m-%d') + ' 09:15:00'  # Market open time
+            end_date_time = end_date_obj.strftime('%Y-%m-%d') + ' 15:15:00'  # Market close time
+            
+            self.logger.info(f"KITE DATE FORMAT: Converting dates from {start_date}/{end_date} to {start_date_time}/{end_date_time}")
+            
             # Get instrument token for the symbol
             instruments = self.kite.instruments()
             instrument_token = None
@@ -156,8 +163,9 @@ class KiteIntegration(DataProvider):
                 debug_responses = []  # Store individual API responses for debugging
                 
                 for chunk_start, chunk_end in date_chunks:
-                    chunk_start_str = chunk_start.strftime('%Y-%m-%d')
-                    chunk_end_str = chunk_end.strftime('%Y-%m-%d')
+                    # Format dates with market hours (09:15 for start, 15:15 for end)
+                    chunk_start_str = chunk_start.strftime('%Y-%m-%d') + ' 09:15:00'  # Market open time
+                    chunk_end_str = chunk_end.strftime('%Y-%m-%d') + ' 15:15:00'    # Market close time
                     
                     self.logger.info(f"KITE API REQUEST: Requesting data for {symbol} from {chunk_start_str} to {chunk_end_str}")
                     
@@ -173,7 +181,8 @@ class KiteIntegration(DataProvider):
                         "request": {
                             "from_date": chunk_start_str,
                             "to_date": chunk_end_str,
-                            "interval": kite_interval
+                            "interval": kite_interval,
+                            "original_date_range": f"{chunk_start.strftime('%Y-%m-%d')} to {chunk_end.strftime('%Y-%m-%d')}"
                         },
                         "response_info": {
                             "data_points": len(chunk_data),
@@ -188,21 +197,22 @@ class KiteIntegration(DataProvider):
                 # For daily data, we can make a single request
                 debug_responses = []  # Initialize debug responses array
                 
-                self.logger.info(f"KITE API REQUEST: Requesting data for {symbol} from {start_date} to {end_date}")
+                self.logger.info(f"KITE API REQUEST: Requesting data for {symbol} from {start_date_time} to {end_date_time}")
                 
                 all_data = self.kite.historical_data(
                     instrument_token,
-                    from_date=start_date,
-                    to_date=end_date,
+                    from_date=start_date_time,
+                    to_date=end_date_time,
                     interval=kite_interval
                 )
                 
                 # Store response details for debugging
                 debug_responses.append({
                     "request": {
-                        "from_date": start_date,
-                        "to_date": end_date,
-                        "interval": kite_interval
+                        "from_date": start_date_time,
+                        "to_date": end_date_time,
+                        "interval": kite_interval,
+                        "original_date_range": f"{start_date} to {end_date}"
                     },
                     "response_info": {
                         "data_points": len(all_data),
@@ -229,7 +239,9 @@ class KiteIntegration(DataProvider):
                         "timeframe": timeframe,
                         "start_date": start_date,
                         "end_date": end_date,
-                        "kite_interval": kite_interval
+                        "kite_interval": kite_interval,
+                        "formatted_start_date": start_date_time,
+                        "formatted_end_date": end_date_time
                     },
                     "responses": debug_responses
                 }, f, indent=2, default=str)  # Use default=str to handle datetime objects
@@ -254,10 +266,15 @@ class KiteIntegration(DataProvider):
             
             # Debug: Log actual date range
             if not df.empty:
-                actual_start = df.index.min().strftime('%Y-%m-%d') if hasattr(df.index.min(), 'strftime') else str(df.index.min())
-                actual_end = df.index.max().strftime('%Y-%m-%d') if hasattr(df.index.max(), 'strftime') else str(df.index.max())
+                actual_start = df.index.min().strftime('%Y-%m-%d %H:%M:%S') if hasattr(df.index.min(), 'strftime') else str(df.index.min())
+                actual_end = df.index.max().strftime('%Y-%m-%d %H:%M:%S') if hasattr(df.index.max(), 'strftime') else str(df.index.max())
                 self.logger.info(f"KITE DATA RANGE: Requested period from {start_date} to {end_date}")
-                self.logger.info(f"KITE DATA RANGE: Actual data from {actual_start} to {actual_end}")
+                self.logger.info(f"KITE DATA RANGE: With time components, requested {start_date_time} to {end_date_time}")
+                self.logger.info(f"KITE DATA RANGE: Actual data received from {actual_start} to {actual_end}")
+                
+                # Calculate expected vs actual data points for debugging
+                if timeframe in ['minute', '5minute', '15minute', '30minute', 'hour']:
+                    self.logger.info(f"KITE DATA STATS: Received {len(df)} data points for {symbol} with {timeframe} timeframe")
             
             return df
         
