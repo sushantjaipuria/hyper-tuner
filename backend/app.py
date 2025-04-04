@@ -1040,9 +1040,41 @@ def run_backtest():
         end_date = data.get('end_date')
         initial_capital = data.get('initial_capital', 100000)
         
-        # Add debug logging for dates and initial capital
+        # Enhanced debug logging for date debugging
+        logger.info(f"DATE_DEBUG - RECEIVED FROM FRONTEND: Raw start_date='{start_date}', end_date='{end_date}'")
+        logger.info(f"DATE_DEBUG - TYPES: start_date type={type(start_date).__name__}, end_date type={type(end_date).__name__}")
+        logger.info(f"DATE_DEBUG - REQUEST HEADERS: {dict([(k, v) for k, v in request.headers.items() if k.lower() not in ['cookie', 'authorization']])}")
+        logger.info(f"DATE_DEBUG - REQUEST DATA: {data}")
+        logger.info(f"DATE_DEBUG - SERVER TIMEZONE: {datetime.now().astimezone().tzinfo}")
+        
+        # Standard debug logging
         logger.info(f"API REQUEST PARAMETERS: Received backtest request with start_date={start_date}, end_date={end_date}")
         logger.info(f"API INITIAL CAPITAL: Received request with initial_capital={initial_capital} (type: {type(initial_capital).__name__})")
+        
+        # Create a date debug file
+        debug_dir = os.path.join(os.path.dirname(__file__), 'debug')
+        if not os.path.exists(debug_dir):
+            os.makedirs(debug_dir)
+            
+        request_debug_file = os.path.join(debug_dir, f"backtest_request_debug_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
+        
+        with open(request_debug_file, 'w') as f:
+            json.dump({
+                "timestamp": datetime.now().isoformat(),
+                "request_data": {
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "strategy_id": strategy_id,
+                    "initial_capital": data.get('initial_capital')
+                },
+                "headers": {k: v for k, v in request.headers.items() if k.lower() not in ['cookie', 'authorization']},
+                "server_info": {
+                    "timezone": str(datetime.now().astimezone().tzinfo),
+                    "current_time": datetime.now().isoformat()
+                }
+            }, f, indent=2, default=str)
+            
+        logger.info(f"DATE_DEBUG - Request debug file saved to {request_debug_file}")
         
         if not start_date or not end_date:
             logger.error("Missing date parameters")
@@ -1060,6 +1092,18 @@ def run_backtest():
         try:
             logger.info(f"Running backtest for strategy {strategy_id} from {start_date} to {end_date}")
             logger.debug(f"Strategy: {strategy}")
+            
+            # Additional debug logging for date parsing
+            try:
+                # Parse the dates manually and log
+                parsed_start = datetime.strptime(start_date, '%Y-%m-%d')
+                parsed_end = datetime.strptime(end_date, '%Y-%m-%d')
+                
+                logger.info(f"DATE_DEBUG - PARSED DATES: start={parsed_start.strftime('%Y-%m-%d')}, end={parsed_end.strftime('%Y-%m-%d')}")
+                logger.info(f"DATE_DEBUG - UTC COMPARISON: original_start={start_date}, utc_start={parsed_start.strftime('%Y-%m-%d')}")
+                logger.info(f"DATE_DEBUG - UTC COMPARISON: original_end={end_date}, utc_end={parsed_end.strftime('%Y-%m-%d')}")
+            except Exception as e:
+                logger.error(f"DATE_DEBUG - DATE PARSING ERROR: {str(e)}")
             
             # Get the current data provider from the factory - this ensures we use the most recently selected provider
             current_data_provider = provider_factory.get_provider()
@@ -1088,6 +1132,30 @@ def run_backtest():
             
             # Save backtest results
             strategy_manager.save_backtest_results(strategy_id, backtest_results)
+            
+            # Add detailed date comparison logging
+            logger.info(f"DATE_DEBUG - BACKTEST DATES COMPARISON:")
+            logger.info(f"  - Frontend requested: start_date={start_date}, end_date={end_date}")
+            logger.info(f"  - Backtest executed with: start_date={backtest_results['start_date']}, end_date={backtest_results['end_date']}")
+            
+            # Save post-backtest debug info
+            post_backtest_debug_file = os.path.join(debug_dir, f"backtest_results_debug_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
+            with open(post_backtest_debug_file, 'w') as f:
+                json.dump({
+                    "timestamp": datetime.now().isoformat(),
+                    "requested_dates": {
+                        "start_date": start_date,
+                        "end_date": end_date
+                    },
+                    "backtest_dates": {
+                        "start_date": backtest_results["start_date"],
+                        "end_date": backtest_results["end_date"]
+                    },
+                    "backtest_id": backtest_results["backtest_id"],
+                    "summary": backtest_results["summary"]
+                }, f, indent=2, default=str)
+            
+            logger.info(f"DATE_DEBUG - Post-backtest debug file saved to {post_backtest_debug_file}")
             
             logger.info(f"Backtest completed successfully for strategy {strategy_id} using {current_provider_name} provider")
             return jsonify({

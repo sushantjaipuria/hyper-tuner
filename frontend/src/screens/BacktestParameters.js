@@ -65,9 +65,47 @@ const BacktestParameters = ({ backtestParams, onSubmit, loading }) => {
       return;
     }
     
+    // Debug log original date objects
+    console.log('DATE_DEBUG - Original date objects:', {
+      startDate: {
+        rawValue: startDate,
+        objectType: typeof startDate,
+        isDateObject: startDate instanceof Date,
+        originalToString: String(startDate),
+        originalToISOString: startDate instanceof Date ? startDate.toISOString() : 'Not a Date object',
+        originalGetTime: startDate instanceof Date ? startDate.getTime() : 'Not a Date object',
+        timezoneOffset: startDate instanceof Date ? startDate.getTimezoneOffset() : 'Not a Date object'
+      },
+      endDate: {
+        rawValue: endDate,
+        objectType: typeof endDate,
+        isDateObject: endDate instanceof Date,
+        originalToString: String(endDate),
+        originalToISOString: endDate instanceof Date ? endDate.toISOString() : 'Not a Date object',
+        originalGetTime: endDate instanceof Date ? endDate.getTime() : 'Not a Date object',
+        timezoneOffset: endDate instanceof Date ? endDate.getTimezoneOffset() : 'Not a Date object'
+      }
+    });
+    
     // Format dates
     const formattedStartDate = startDate.toISOString().split('T')[0];
     const formattedEndDate = endDate.toISOString().split('T')[0];
+    
+    // Debug log formatted dates
+    console.log('DATE_DEBUG - User selected dates after formatting:', {
+      startDate: {
+        displayValue: formattedStartDate,
+        rawValue: startDate,
+        originalISOString: startDate.toISOString(),
+        formattingMethod: 'toISOString().split(\'T\')[0]'
+      },
+      endDate: {
+        displayValue: formattedEndDate,
+        rawValue: endDate,
+        originalISOString: endDate.toISOString(),
+        formattingMethod: 'toISOString().split(\'T\')[0]'
+      }
+    });
     
     // Prepare backtest parameters
     const backtestData = {
@@ -75,6 +113,13 @@ const BacktestParameters = ({ backtestParams, onSubmit, loading }) => {
       start_date: formattedStartDate,
       end_date: formattedEndDate
     };
+    
+    // Debug log final data being sent to backend
+    console.log('DATE_DEBUG - Dates being sent to backend:', {
+      startDate: formattedStartDate,
+      endDate: formattedEndDate,
+      fullRequestBody: backtestData
+    });
     
     // Submit backtest parameters
     onSubmit(backtestData);
