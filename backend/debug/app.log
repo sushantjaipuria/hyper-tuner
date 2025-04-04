@@ -1,0 +1,59 @@
+2025-04-04 11:20:36,640 - __main__ - INFO - Logging configured: Console and file logging to /workspace/backend/debug/app.log
+2025-04-04 11:20:36,960 - __main__ - INFO - Using data provider: yahoo
+2025-04-04 11:20:36,973 - __main__ - INFO - Starting Flask server on port 3001
+2025-04-04 11:20:38,942 - __main__ - INFO - Logging configured: Console and file logging to /workspace/backend/debug/app.log
+2025-04-04 11:20:39,261 - __main__ - INFO - Using data provider: yahoo
+2025-04-04 11:20:39,275 - __main__ - INFO - Starting Flask server on port 3001
+2025-04-04 11:20:51,656 - __main__ - INFO - Fetching available indicators
+2025-04-04 11:20:51,661 - __main__ - INFO - Successfully retrieved 158 indicators
+2025-04-04 11:20:51,956 - __main__ - INFO - Fetching available indicators
+2025-04-04 11:20:51,960 - __main__ - INFO - Successfully retrieved 158 indicators
+2025-04-04 11:20:51,971 - __main__ - INFO - Sending provider info to frontend - Provider: yahoo, User: None, Display: yahoo
+2025-04-04 11:20:52,139 - __main__ - INFO - Sending provider info to frontend - Provider: yahoo, User: None, Display: yahoo
+2025-04-04 11:21:38,258 - __main__ - INFO - DATE_DEBUG - Detected request from 'Run Backtest & Continue' button
+2025-04-04 11:21:38,258 - __main__ - INFO - DATE_DEBUG - RECEIVED FROM FRONTEND: Raw start_date='2024-12-31', end_date='2025-03-30'
+2025-04-04 11:21:38,258 - __main__ - INFO - DATE_DEBUG - TYPES: start_date type=str, end_date type=str
+2025-04-04 11:21:38,258 - __main__ - INFO - DATE_DEBUG - REQUEST HEADERS: {'Accept': 'application/json, text/plain, */*', 'Host': 'localhost:3001', 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36', 'Accept-Encoding': 'gzip, deflate, br, zstd', 'Accept-Language': 'en-GB,en-US;q=0.9,en;q=0.8', 'Origin': 'https://symmetrical-yodel-wrp6wp55v4v2v5jv-3000.app.github.dev', 'X-Request-Id': '44924ad0b85be477a1437c372cc4e7bf', 'X-Real-Ip': '171.76.80.28', 'X-Forwarded-Port': '443', 'X-Forwarded-Scheme': 'https', 'X-Original-Uri': '/api/run-backtest', 'X-Scheme': 'https', 'Sec-Ch-Ua-Platform': '"macOS"', 'Sec-Ch-Ua': '"Chromium";v="134", "Not:A-Brand";v="24", "Google Chrome";v="134"', 'Sec-Ch-Ua-Mobile': '?0', 'Sec-Fetch-Site': 'same-site', 'Sec-Fetch-Mode': 'cors', 'Sec-Fetch-Dest': 'empty', 'Priority': 'u=1, i', 'X-Original-Proto': 'https', 'X-Forwarded-Proto': 'https', 'X-Forwarded-Host': 'symmetrical-yodel-wrp6wp55v4v2v5jv-3001.app.github.dev', 'X-Forwarded-For': '171.76.80.28', 'Proxy-Connection': 'Keep-Alive', 'Content-Type': 'application/json', 'Content-Length': '158'}
+2025-04-04 11:21:38,259 - __main__ - INFO - DATE_DEBUG - REQUEST DATA: {'strategy_id': 'c1e37806-f74a-4d53-847a-b63be102f28a', 'initial_capital': 1500000, 'start_date': '2024-12-31', 'end_date': '2025-03-30', '_debug_date_tracking': True}
+2025-04-04 11:21:38,259 - __main__ - INFO - DATE_DEBUG - SERVER TIMEZONE: UTC
+2025-04-04 11:21:38,259 - __main__ - INFO - API REQUEST PARAMETERS: Received backtest request with start_date=2024-12-31, end_date=2025-03-30
+2025-04-04 11:21:38,259 - __main__ - INFO - API INITIAL CAPITAL: Received request with initial_capital=1500000 (type: int)
+2025-04-04 11:21:38,260 - __main__ - INFO - DATE_DEBUG - Request debug file saved to /workspace/backend/debug/backtest_request_debug_20250404_112138.json
+2025-04-04 11:21:38,411 - __main__ - INFO - Running backtest for strategy c1e37806-f74a-4d53-847a-b63be102f28a from 2024-12-31 to 2025-03-30
+2025-04-04 11:21:38,412 - __main__ - INFO - DATE_DEBUG - PARSED DATES: start=2024-12-31, end=2025-03-30
+2025-04-04 11:21:38,413 - __main__ - INFO - DATE_DEBUG - CURRENT UTC TIME: 2025-04-04T11:21:38.413042
+2025-04-04 11:21:38,414 - __main__ - INFO - DATE_DEBUG - UTC COMPARISON: original_start=2024-12-31, utc_start=2024-12-31
+2025-04-04 11:21:38,414 - __main__ - INFO - DATE_DEBUG - UTC COMPARISON: original_end=2025-03-30, utc_end=2025-03-30
+2025-04-04 11:21:38,415 - __main__ - INFO - Running backtest with provider: yahoo
+2025-04-04 11:21:38,415 - __main__ - INFO - Data provider class: YahooFinanceIntegration
+2025-04-04 11:21:38,415 - __main__ - INFO - Data provider type: YahooFinanceIntegration
+2025-04-04 11:21:39,832 - __main__ - ERROR - Backtest error: No historical data found for ZOMATO from 2024-12-31 to 2025-03-30. Please check the symbol and date range.
+2025-04-04 11:21:43,207 - __main__ - INFO - Setting data provider - Provider: kite, User: sushant (type: str)
+2025-04-04 11:21:43,207 - __main__ - INFO - Full request data: {'provider': 'kite', 'user_id': 'sushant'}
+2025-04-04 11:21:43,208 - __main__ - INFO - Request headers: {'Accept': 'application/json, text/plain, */*', 'Host': 'localhost:3001', 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36', 'Accept-Encoding': 'gzip, deflate, br, zstd', 'Accept-Language': 'en-GB,en-US;q=0.9,en;q=0.8', 'Origin': 'https://symmetrical-yodel-wrp6wp55v4v2v5jv-3000.app.github.dev', 'X-Request-Id': '18a8490a8fb89ed0c2cb286298763128', 'X-Real-Ip': '171.76.80.28', 'X-Forwarded-Port': '443', 'X-Forwarded-Scheme': 'https', 'X-Original-Uri': '/api/set-data-provider', 'X-Scheme': 'https', 'Sec-Ch-Ua-Platform': '"macOS"', 'Sec-Ch-Ua': '"Chromium";v="134", "Not:A-Brand";v="24", "Google Chrome";v="134"', 'Sec-Ch-Ua-Mobile': '?0', 'Sec-Fetch-Site': 'same-site', 'Sec-Fetch-Mode': 'cors', 'Sec-Fetch-Dest': 'empty', 'Priority': 'u=1, i', 'X-Original-Proto': 'https', 'X-Forwarded-Proto': 'https', 'X-Forwarded-Host': 'symmetrical-yodel-wrp6wp55v4v2v5jv-3001.app.github.dev', 'X-Forwarded-For': '171.76.80.28', 'Proxy-Connection': 'Keep-Alive', 'Content-Type': 'application/json', 'Content-Length': '39'}
+2025-04-04 11:21:43,208 - __main__ - INFO - Checking if Kite authentication is required for user: sushant
+2025-04-04 11:21:43,209 - __main__ - INFO - Current user type: str
+2025-04-04 11:21:43,244 - __main__ - INFO - Kite token valid: True, requires auth: False (type: bool)
+2025-04-04 11:21:43,245 - __main__ - INFO - Responding to set-data-provider with: {'success': True, 'provider': 'kite', 'display_name': 'Kite-Sushant', 'user_id': 'sushant', 'requires_auth': False}
+2025-04-04 11:21:44,981 - __main__ - INFO - DATE_DEBUG - Detected request from 'Run Backtest & Continue' button
+2025-04-04 11:21:44,981 - __main__ - INFO - DATE_DEBUG - RECEIVED FROM FRONTEND: Raw start_date='2024-12-31', end_date='2025-03-30'
+2025-04-04 11:21:44,982 - __main__ - INFO - DATE_DEBUG - TYPES: start_date type=str, end_date type=str
+2025-04-04 11:21:44,982 - __main__ - INFO - DATE_DEBUG - REQUEST HEADERS: {'Accept': 'application/json, text/plain, */*', 'Host': 'localhost:3001', 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36', 'Accept-Encoding': 'gzip, deflate, br, zstd', 'Accept-Language': 'en-GB,en-US;q=0.9,en;q=0.8', 'Origin': 'https://symmetrical-yodel-wrp6wp55v4v2v5jv-3000.app.github.dev', 'X-Request-Id': 'ba7625856c3d963c30f95bfb8cabd822', 'X-Real-Ip': '171.76.80.28', 'X-Forwarded-Port': '443', 'X-Forwarded-Scheme': 'https', 'X-Original-Uri': '/api/run-backtest', 'X-Scheme': 'https', 'Sec-Ch-Ua-Platform': '"macOS"', 'Sec-Ch-Ua': '"Chromium";v="134", "Not:A-Brand";v="24", "Google Chrome";v="134"', 'Sec-Ch-Ua-Mobile': '?0', 'Sec-Fetch-Site': 'same-site', 'Sec-Fetch-Mode': 'cors', 'Sec-Fetch-Dest': 'empty', 'Priority': 'u=1, i', 'X-Original-Proto': 'https', 'X-Forwarded-Proto': 'https', 'X-Forwarded-Host': 'symmetrical-yodel-wrp6wp55v4v2v5jv-3001.app.github.dev', 'X-Forwarded-For': '171.76.80.28', 'Proxy-Connection': 'Keep-Alive', 'Content-Type': 'application/json', 'Content-Length': '158'}
+2025-04-04 11:21:44,982 - __main__ - INFO - DATE_DEBUG - REQUEST DATA: {'strategy_id': 'c1e37806-f74a-4d53-847a-b63be102f28a', 'initial_capital': 1500000, 'start_date': '2024-12-31', 'end_date': '2025-03-30', '_debug_date_tracking': True}
+2025-04-04 11:21:44,982 - __main__ - INFO - DATE_DEBUG - SERVER TIMEZONE: UTC
+2025-04-04 11:21:44,982 - __main__ - INFO - API REQUEST PARAMETERS: Received backtest request with start_date=2024-12-31, end_date=2025-03-30
+2025-04-04 11:21:44,983 - __main__ - INFO - API INITIAL CAPITAL: Received request with initial_capital=1500000 (type: int)
+2025-04-04 11:21:44,983 - __main__ - INFO - DATE_DEBUG - Request debug file saved to /workspace/backend/debug/backtest_request_debug_20250404_112144.json
+2025-04-04 11:21:44,985 - __main__ - INFO - Running backtest for strategy c1e37806-f74a-4d53-847a-b63be102f28a from 2024-12-31 to 2025-03-30
+2025-04-04 11:21:44,986 - __main__ - INFO - DATE_DEBUG - PARSED DATES: start=2024-12-31, end=2025-03-30
+2025-04-04 11:21:44,986 - __main__ - INFO - DATE_DEBUG - CURRENT UTC TIME: 2025-04-04T11:21:44.986735
+2025-04-04 11:21:44,988 - __main__ - INFO - DATE_DEBUG - UTC COMPARISON: original_start=2024-12-31, utc_start=2024-12-31
+2025-04-04 11:21:44,989 - __main__ - INFO - DATE_DEBUG - UTC COMPARISON: original_end=2025-03-30, utc_end=2025-03-30
+2025-04-04 11:21:44,989 - __main__ - INFO - Running backtest with provider: kite, user: sushant
+2025-04-04 11:21:44,989 - __main__ - INFO - Data provider class: KiteIntegration
+2025-04-04 11:21:44,990 - __main__ - INFO - Data provider type: KiteIntegration
+2025-04-04 11:21:48,580 - __main__ - INFO - DATE_DEBUG - BACKTEST DATES COMPARISON:
+2025-04-04 11:21:48,580 - __main__ - INFO -   - Frontend requested: start_date=2024-12-31, end_date=2025-03-30
+2025-04-04 11:21:48,580 - __main__ - INFO -   - Backtest executed with: start_date=2024-12-31, end_date=2025-03-30
+2025-04-04 11:21:48,581 - __main__ - INFO - DATE_DEBUG - Post-backtest debug file saved to /workspace/backend/debug/backtest_results_debug_20250404_112148.json
+2025-04-04 11:21:48,581 - __main__ - INFO - Backtest completed successfully for strategy c1e37806-f74a-4d53-847a-b63be102f28a using kite provider

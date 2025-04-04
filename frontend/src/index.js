@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import { formatLocalDate, getDateDebugInfo } from './utils/dateUtils';
+import { runDateTests } from './utils/dateUtils.test';
 
 // Add global error handler for debugging
 if (process.env.NODE_ENV === 'development') {
@@ -77,8 +79,29 @@ if (process.env.NODE_ENV === 'development') {
     }
   };
   
+  // Add global access to date utilities for debugging
+  window.dateUtils = {
+    formatLocalDate,
+    getDateDebugInfo,
+    runTests: runDateTests,
+    compareFormats: (date) => {
+      if (!date) date = new Date();
+      return {
+        date: date,
+        localFormatted: formatLocalDate(date),
+        isoFormatted: date.toISOString().split('T')[0],
+        debugInfo: getDateDebugInfo(date)
+      };
+    },
+    // Helper to test a specific date
+    testDate: (year, month, day) => {
+      const date = new Date(year, month - 1, day); // Adjust month (0-indexed)
+      return window.dateUtils.compareFormats(date);
+    }
+  };
+  
   console.log('%c[DEBUG LOGGING ENABLED]', 'background: #2e7d32; color: white; padding: 4px; border-radius: 2px;', 
-    'Access logs with window.debugLogs');
+    'Access logs with window.debugLogs and date utilities with window.dateUtils');
 }
 
 const root = ReactDOM.createRoot(document.getElementById('root'));

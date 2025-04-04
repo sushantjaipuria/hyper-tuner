@@ -3,6 +3,7 @@ import { DataSourceContext } from '../context/DataSourceContext';
 import KiteTokenExpiredModal from '../components/KiteTokenExpiredModal';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import { formatLocalDate, getDateDebugInfo } from '../utils/dateUtils';
 
 const BacktestParameters = ({ backtestParams, onSubmit, loading }) => {
   const { dataProvider, checkKiteToken, shouldVerifyToken } = useContext(DataSourceContext);
@@ -65,35 +66,15 @@ const BacktestParameters = ({ backtestParams, onSubmit, loading }) => {
       return;
     }
     
-    // Debug log original date objects
+    // Debug log original date objects with enhanced debug info
     console.log('DATE_DEBUG - Original date objects:', {
-      startDate: {
-        rawValue: startDate,
-        objectType: typeof startDate,
-        isDateObject: startDate instanceof Date,
-        originalToString: String(startDate),
-        originalToISOString: startDate instanceof Date ? startDate.toISOString() : 'Not a Date object',
-        originalGetTime: startDate instanceof Date ? startDate.getTime() : 'Not a Date object',
-        timezoneOffset: startDate instanceof Date ? startDate.getTimezoneOffset() : 'Not a Date object',
-        localDateString: startDate instanceof Date ? startDate.toLocaleDateString() : 'Not a Date object',
-        currentTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        browserLocale: navigator.language || navigator.userLanguage
-      },
-      endDate: {
-        rawValue: endDate,
-        objectType: typeof endDate,
-        isDateObject: endDate instanceof Date,
-        originalToString: String(endDate),
-        originalToISOString: endDate instanceof Date ? endDate.toISOString() : 'Not a Date object',
-        originalGetTime: endDate instanceof Date ? endDate.getTime() : 'Not a Date object',
-        timezoneOffset: endDate instanceof Date ? endDate.getTimezoneOffset() : 'Not a Date object',
-        localDateString: endDate instanceof Date ? endDate.toLocaleDateString() : 'Not a Date object'
-      }
+      startDate: getDateDebugInfo(startDate),
+      endDate: getDateDebugInfo(endDate)
     });
     
-    // Format dates
-    const formattedStartDate = startDate.toISOString().split('T')[0];
-    const formattedEndDate = endDate.toISOString().split('T')[0];
+    // Format dates using local date components instead of ISO string
+    const formattedStartDate = formatLocalDate(startDate);
+    const formattedEndDate = formatLocalDate(endDate);
     
     // Debug log formatted dates with enhanced info
     console.log('DATE_DEBUG - User selected dates after formatting:', {
@@ -101,7 +82,7 @@ const BacktestParameters = ({ backtestParams, onSubmit, loading }) => {
         displayValue: formattedStartDate,
         rawValue: startDate,
         originalISOString: startDate.toISOString(),
-        formattingMethod: 'toISOString().split(\'T\')[0]',
+        formattingMethod: 'formatLocalDate() using local date components',
         dateParts: {
           year: startDate.getFullYear(),
           month: startDate.getMonth() + 1, // +1 because getMonth() is 0-indexed
@@ -115,7 +96,7 @@ const BacktestParameters = ({ backtestParams, onSubmit, loading }) => {
         displayValue: formattedEndDate,
         rawValue: endDate,
         originalISOString: endDate.toISOString(),
-        formattingMethod: 'toISOString().split(\'T\')[0]',
+        formattingMethod: 'formatLocalDate() using local date components',
         dateParts: {
           year: endDate.getFullYear(),
           month: endDate.getMonth() + 1, // +1 because getMonth() is 0-indexed
@@ -147,7 +128,8 @@ const BacktestParameters = ({ backtestParams, onSubmit, loading }) => {
       endDate: formattedEndDate,
       fullRequestBody: backtestData,
       runTimestamp: new Date().toISOString(),
-      sourceButtonId: 'run-backtest-continue'
+      sourceButtonId: 'run-backtest-continue',
+      dateMethodUsed: 'formatLocalDate'
     });
     
     // Submit backtest parameters
