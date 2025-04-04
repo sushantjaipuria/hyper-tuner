@@ -61,7 +61,8 @@ class BacktestEngine:
             dict: Backtest results
         """
         try:
-            # Add debug logging for initial capital at the start
+            # Add debug logging for dates and initial capital at the start
+            self.logger.info(f"BACKTEST ENGINE START: Backtesting period from {start_date} to {end_date}")
             self.logger.info(f"BACKTEST ENGINE START: Using initial_capital={initial_capital} (type: {type(initial_capital).__name__})")
             
             # Get strategy details
@@ -85,6 +86,12 @@ class BacktestEngine:
             if data.empty:
                 self.logger.error(f"No historical data found for {symbol} from {start_date} to {end_date}")
                 raise ValueError(f"No historical data found for {symbol} from {start_date} to {end_date}. Please check the symbol and date range.")
+                
+            # Log actual data range
+            if not data.empty:
+                data_start = data.index.min().strftime('%Y-%m-%d') if hasattr(data.index.min(), 'strftime') else str(data.index.min())
+                data_end = data.index.max().strftime('%Y-%m-%d') if hasattr(data.index.max(), 'strftime') else str(data.index.max())
+                self.logger.info(f"DATA RANGE: Retrieved {len(data)} data points from {data_start} to {data_end}")
                 
             # Check if close column exists and has valid data
             if 'close' not in data.columns:
@@ -207,7 +214,8 @@ class BacktestEngine:
             portfolio_value = cerebro.broker.getvalue()
             returns = (portfolio_value - initial_capital) / initial_capital * 100
             
-            # Add debug logging with initial capital and final value
+            # Add debug logging with dates, initial capital and final value
+            self.logger.info(f"BACKTEST ENGINE END: Completed backtest from {start_date} to {end_date}")
             self.logger.info(f"BACKTEST ENGINE END: Backtest completed with initial_capital={initial_capital}, final_value={portfolio_value}, returns={returns:.2f}%")
             
             # Get all trades

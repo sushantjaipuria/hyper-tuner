@@ -1040,7 +1040,8 @@ def run_backtest():
         end_date = data.get('end_date')
         initial_capital = data.get('initial_capital', 100000)
         
-        # Add debug logging for initial capital
+        # Add debug logging for dates and initial capital
+        logger.info(f"API REQUEST PARAMETERS: Received backtest request with start_date={start_date}, end_date={end_date}")
         logger.info(f"API INITIAL CAPITAL: Received request with initial_capital={initial_capital} (type: {type(initial_capital).__name__})")
         
         if not start_date or not end_date:
