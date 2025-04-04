@@ -3,8 +3,10 @@ import logging
 import inspect
 from datetime import datetime, date
 import traceback
+from logging_config import get_logger
 
-logger = logging.getLogger(__name__)
+# Get a logger instance
+logger = get_logger(__name__)
 
 def log_date_conversion(input_value, output_value, conversion_type, location=None, extra_info=None):
     """

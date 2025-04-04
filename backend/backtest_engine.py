@@ -15,6 +15,7 @@ import io
 from indicators import Indicators
 from data_provider import DataProvider
 from utils import safe_strftime, format_date_for_api, log_date_conversion
+from logging_config import get_logger
 
 class BacktestEngine:
     """Class to handle backtesting of trading strategies"""
@@ -27,7 +28,7 @@ class BacktestEngine:
             data_provider (DataProvider): An instance of a class implementing the DataProvider interface
         """
         self.data_provider = data_provider
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__)
         self.logger.info("BacktestEngine initialized")
         self.indicators = Indicators()
     

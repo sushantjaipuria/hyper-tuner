@@ -21,42 +21,10 @@ from data_provider_factory import provider_factory
 from indicators import Indicators
 from kite_integration import KiteIntegration
 from utils import safe_strptime, safe_strftime, format_date_for_api, log_date_conversion
+from logging_config import setup_logging, get_logger
 
-# Ensure debug directory exists
-debug_dir = os.path.join(os.path.dirname(__file__), 'debug')
-if not os.path.exists(debug_dir):
-    os.makedirs(debug_dir)
-
-# Configure logging with both console and file handlers
-log_file_path = os.path.join(debug_dir, 'app.log')
-log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-
-# Create formatter
-formatter = logging.Formatter(log_format)
-
-# Configure root logger
-logging.basicConfig(level=logging.INFO, format=log_format)
-logger = logging.getLogger(__name__)
-
-# Remove any existing handlers to avoid duplication
-for handler in logger.handlers[:]:
-    logger.removeHandler(handler)
-    
-# Add console handler
-console_handler = logging.StreamHandler()
-console_handler.setFormatter(formatter)
-logger.addHandler(console_handler)
-
-# Add file handler with daily rotation
-file_handler = TimedRotatingFileHandler(
-    log_file_path, 
-    when='midnight',
-    backupCount=7  # Keep logs for a week
-)
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
-
-logger.info(f"Logging configured: Console and file logging to {log_file_path}")
+# Set up logging with filter for DATE_CONVERSION logs
+logger = setup_logging('hyper-tuner')
 
 # Initialize Flask app
 app = Flask(__name__)

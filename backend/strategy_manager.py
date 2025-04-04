@@ -1,16 +1,16 @@
-
 import json
 import os
 import uuid
 import logging
 from datetime import datetime
+from logging_config import get_logger
 
 class StrategyManager:
     """Class to manage trading strategies"""
     
     def __init__(self, storage_dir='./strategies'):
         """Initialize the Strategy Manager"""
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__)
         self.storage_dir = storage_dir
         
         # Create storage directory if it doesn't exist

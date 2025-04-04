@@ -57,3 +57,38 @@
 2025-04-04 11:21:48,580 - __main__ - INFO -   - Backtest executed with: start_date=2024-12-31, end_date=2025-03-30
 2025-04-04 11:21:48,581 - __main__ - INFO - DATE_DEBUG - Post-backtest debug file saved to /workspace/backend/debug/backtest_results_debug_20250404_112148.json
 2025-04-04 11:21:48,581 - __main__ - INFO - Backtest completed successfully for strategy c1e37806-f74a-4d53-847a-b63be102f28a using kite provider
+2025-04-04 17:36:11,301 - test-logger - INFO - Logging configured with filtered console output and full file logging to /Users/sushant/Documents/GitHub/hyper-tuner/backend/debug/app.log
+2025-04-04 17:36:11,301 - test-logger - INFO - DATE_CONVERSION logs will only appear in the log file, not in console output
+2025-04-04 17:36:11,302 - test-logger - INFO - TEST - Regular INFO log message (should appear in console and file)
+2025-04-04 17:36:11,302 - test-logger - WARNING - TEST - Regular WARNING log message (should appear in console and file)
+2025-04-04 17:36:11,302 - test-logger - ERROR - TEST - Regular ERROR log message (should appear in console and file)
+2025-04-04 17:36:11,302 - test-logger - INFO - TEST - About to log date conversions (these should only appear in the log file)
+2025-04-04 17:36:11,315 - test-logger - INFO - TEST - Completed date conversion tests with result: 2023-04-05
+2025-04-04 17:36:11,315 - test-logger - INFO - TEST - Check the app.log file to verify DATE_CONVERSION logs are there
+2025-04-04 17:36:11,315 - test-logger - INFO - TEST - PATH: backend/debug/app.log
+2025-04-04 17:36:41,245 - hyper-tuner - INFO - Logging configured with filtered console output and full file logging to /Users/sushant/Documents/GitHub/hyper-tuner/backend/debug/app.log
+2025-04-04 17:36:41,245 - hyper-tuner - INFO - DATE_CONVERSION logs will only appear in the log file, not in console output
+2025-04-04 17:36:41,247 - test-logger - INFO - Logging configured with filtered console output and full file logging to /Users/sushant/Documents/GitHub/hyper-tuner/backend/debug/app.log
+2025-04-04 17:36:41,247 - test-logger - INFO - DATE_CONVERSION logs will only appear in the log file, not in console output
+2025-04-04 17:36:41,247 - test-logger - INFO - TEST - Regular INFO log message (should appear in console and file)
+2025-04-04 17:36:41,247 - test-logger - WARNING - TEST - Regular WARNING log message (should appear in console and file)
+2025-04-04 17:36:41,247 - test-logger - ERROR - TEST - Regular ERROR log message (should appear in console and file)
+2025-04-04 17:36:41,247 - test-logger - INFO - TEST - About to log date conversions (these should only appear in the log file)
+2025-04-04 17:36:41,252 - utils - INFO - DATE_CONVERSION - Test DATE_CONVERSION direct at test_logging.py:30 in run_test:
+  Input: 2023-04-05 (type: str)
+  Output: 2023-04-05 00:00:00 (type: datetime)
+  Context: {'test': 'direct conversion log'}
+  Output timezone info: None
+2025-04-04 17:36:41,256 - utils - INFO - DATE_CONVERSION - strptime with format '%Y-%m-%d' at utils.py:68 in safe_strptime:
+  Input: 2023-04-05 (type: str)
+  Output: 2023-04-05 00:00:00 (type: datetime)
+  Context: {'test': 'via safe_strptime'}
+  Output timezone info: None
+2025-04-04 17:36:41,256 - utils - INFO - DATE_CONVERSION - strftime with format '%Y-%m-%d' at utils.py:93 in safe_strftime:
+  Input: 2023-04-05 00:00:00 (type: datetime)
+  Output: 2023-04-05 (type: str)
+  Context: {'test': 'via safe_strftime'}
+  Input timezone info: None
+2025-04-04 17:36:41,257 - test-logger - INFO - TEST - Completed date conversion tests with result: 2023-04-05
+2025-04-04 17:36:41,257 - test-logger - INFO - TEST - Check the app.log file to verify DATE_CONVERSION logs are there
+2025-04-04 17:36:41,257 - test-logger - INFO - TEST - PATH: backend/debug/app.log

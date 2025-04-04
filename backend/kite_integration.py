@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from data_provider import DataProvider
 from config import load_kite_config, save_kite_config, update_kite_access_token, DEFAULT_KITE_USER
 from utils import safe_strptime, safe_strftime, format_date_for_api, log_date_conversion
+from logging_config import get_logger
 
 class KiteIntegration(DataProvider):
     """Class to handle integration with Zerodha Kite API, implementing the DataProvider interface"""
@@ -19,7 +20,7 @@ class KiteIntegration(DataProvider):
             user_id (str): User identifier (default: "satyam")
         """
         super().__init__()
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__)
         self.user_id = user_id
         
         # Load configuration from file
