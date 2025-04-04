@@ -61,6 +61,9 @@ class BacktestEngine:
             dict: Backtest results
         """
         try:
+            # Add debug logging for initial capital at the start
+            self.logger.info(f"BACKTEST ENGINE START: Using initial_capital={initial_capital} (type: {type(initial_capital).__name__})")
+            
             # Get strategy details
             strategy_id = strategy['strategy_id']
             strategy_name = strategy['name']
@@ -189,8 +192,11 @@ class BacktestEngine:
             # Set initial cash
             cerebro.broker.setcash(initial_capital)
             
-            # Set commission (0.1%)
-            cerebro.broker.setcommission(commission=0.001)
+            # Add debug logging after setting initial cash
+            self.logger.info(f"BACKTEST ENGINE CEREBRO: Set initial_capital={initial_capital}, Cerebro cash={cerebro.broker.getcash()}")
+            
+            # Set commission (0%)
+            cerebro.broker.setcommission(commission=0)
             
             # Run backtest
             self.logger.info(f"Running backtest for strategy {strategy_name}...")
@@ -200,6 +206,9 @@ class BacktestEngine:
             # Get backtest results
             portfolio_value = cerebro.broker.getvalue()
             returns = (portfolio_value - initial_capital) / initial_capital * 100
+            
+            # Add debug logging with initial capital and final value
+            self.logger.info(f"BACKTEST ENGINE END: Backtest completed with initial_capital={initial_capital}, final_value={portfolio_value}, returns={returns:.2f}%")
             
             # Get all trades
             trades = []

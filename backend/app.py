@@ -1040,6 +1040,9 @@ def run_backtest():
         end_date = data.get('end_date')
         initial_capital = data.get('initial_capital', 100000)
         
+        # Add debug logging for initial capital
+        logger.info(f"API INITIAL CAPITAL: Received request with initial_capital={initial_capital} (type: {type(initial_capital).__name__})")
+        
         if not start_date or not end_date:
             logger.error("Missing date parameters")
             return jsonify({"success": False, "error": "Start date and end date are required"}), 400
