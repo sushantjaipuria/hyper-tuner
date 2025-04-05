@@ -6,6 +6,13 @@ import logging
 # Get the logger
 logger = logging.getLogger(__name__)
 
+# Helper function to format datetime objects for json serialization
+def format_datetime(value):
+    """Format datetime objects to string for JSON serialization"""
+    if isinstance(value, datetime):
+        return value.strftime('%Y-%m-%d %H:%M:%S')
+    return value
+
 def generate_position_tracking_section(backtest_results):
     """Generate section about position tracking"""
     try:
@@ -45,19 +52,23 @@ Detailed position tracking information is not available for this backtest.
                 exit_time = event.get('timestamp')
                 
                 try:
-                    if isinstance(entry_time, str) and isinstance(exit_time, str):
-                        entry_dt = datetime.strptime(entry_time, '%Y-%m-%d %H:%M:%S')
-                        exit_dt = datetime.strptime(exit_time, '%Y-%m-%d %H:%M:%S')
-                        duration = (exit_dt - entry_dt).total_seconds() / 3600  # hours
-                        
-                        position_lifecycles.append({
-                            'entry': entry_time,
-                            'exit': exit_time,
-                            'duration_hours': duration,
-                            'entry_price': current_entry.get('price', 0),
-                            'exit_price': event.get('price', 0),
-                            'profit_pct': event.get('profit_pct', 0)
-                        })
+                    # Make sure both are strings first
+                    entry_time_str = format_datetime(entry_time) if isinstance(entry_time, datetime) else str(entry_time)
+                    exit_time_str = format_datetime(exit_time) if isinstance(exit_time, datetime) else str(exit_time)
+                    
+                    # Parse the string timestamps to datetime objects
+                    entry_dt = datetime.strptime(entry_time_str, '%Y-%m-%d %H:%M:%S')
+                    exit_dt = datetime.strptime(exit_time_str, '%Y-%m-%d %H:%M:%S')
+                    duration = (exit_dt - entry_dt).total_seconds() / 3600  # hours
+                    
+                    position_lifecycles.append({
+                        'entry': entry_time,
+                        'exit': exit_time,
+                        'duration_hours': duration,
+                        'entry_price': current_entry.get('price', 0),
+                        'exit_price': event.get('price', 0),
+                        'profit_pct': event.get('profit_pct', 0)
+                    })
                 except Exception as e:
                     logger.warning(f"Error calculating position duration: {str(e)}")
                 
@@ -546,8 +557,14 @@ The table below shows how conditions were evaluated at key decision points:
                     is_trade_point = False
                     for trade_time in trade_timestamps:
                         try:
-                            eval_dt = datetime.strptime(str(timestamp), '%Y-%m-%d %H:%M:%S') if isinstance(timestamp, str) else timestamp
-                            trade_dt = datetime.strptime(trade_time, '%Y-%m-%d %H:%M:%S')
+                            # Make sure both are strings first
+                            eval_time_str = format_datetime(timestamp) if isinstance(timestamp, datetime) else str(timestamp)
+                            trade_time_str = format_datetime(trade_time) if isinstance(trade_time, datetime) else str(trade_time)
+                            
+                            # Now parse them
+                            eval_dt = datetime.strptime(eval_time_str, '%Y-%m-%d %H:%M:%S')
+                            trade_dt = datetime.strptime(trade_time_str, '%Y-%m-%d %H:%M:%S')
+                            
                             if abs((eval_dt - trade_dt).total_seconds()) < 3600:  # Within an hour
                                 is_trade_point = True
                                 break

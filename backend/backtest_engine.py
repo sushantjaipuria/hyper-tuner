@@ -589,6 +589,20 @@ class BacktestEngine:
                 self.stop_loss = stop_loss
                 self.target_profit = target_profit
                 
+                # Helper method for datetime formatting
+                def _format_date(self, dt_value):
+                    """Format a datetime value to string"""
+                    if dt_value is None:
+                        return None
+                        
+                    try:
+                        if isinstance(dt_value, datetime):
+                            return dt_value.strftime('%Y-%m-%d %H:%M:%S')
+                        return str(dt_value)
+                    except Exception as e:
+                        self.log(f"Error formatting datetime: {str(e)}")
+                        return str(dt_value) if dt_value is not None else None
+                
                 # Log available data feed lines for debugging
                 self.log("Available data feed lines:")
                 for i, data in enumerate(self.datas):
@@ -672,7 +686,7 @@ class BacktestEngine:
                         
                         # Create a new trade record
                         self.current_trade = {
-                            'entry_date': self.datas[0].datetime.datetime(0),
+                            'entry_date': self._format_date(self.datas[0].datetime.datetime(0)),
                             'entry_price': order.executed.price,
                             'exit_date': None,
                             'exit_price': None,
@@ -685,9 +699,11 @@ class BacktestEngine:
                         self.position_entry_bar = len(self.datas[0])
                         
                         # Track position entry
+                        timestamp_raw = self.datas[0].datetime.datetime(0)
+                        timestamp_str = self._format_date(timestamp_raw)
                         self.position_tracking.append({
                             'action': 'ENTRY',
-                            'timestamp': self.datas[0].datetime.datetime(0),
+                            'timestamp': timestamp_str,
                             'price': order.executed.price,
                             'size': order.executed.size,
                             'bar_index': len(self.datas[0]),
@@ -699,7 +715,7 @@ class BacktestEngine:
                         self.log(f"SELL EXECUTED, Price: {order.executed.price:.2f}, Cost: {order.executed.value:.2f}, Comm: {order.executed.comm:.2f}")
                         
                         # Update the current trade record
-                        self.current_trade['exit_date'] = self.datas[0].datetime.datetime(0)
+                        self.current_trade['exit_date'] = self._format_date(self.datas[0].datetime.datetime(0))
                         self.current_trade['exit_price'] = order.executed.price
                         
                         # Calculate profit in points and percent
@@ -729,9 +745,11 @@ class BacktestEngine:
                                 exit_reason = f'Stop loss triggered ({loss_pct:.2f}%)'
                         
                         # Track position exit
+                        timestamp_raw = self.datas[0].datetime.datetime(0)
+                        timestamp_str = self._format_date(timestamp_raw)
                         self.position_tracking.append({
                             'action': 'EXIT',
-                            'timestamp': self.datas[0].datetime.datetime(0),
+                            'timestamp': timestamp_str,
                             'price': order.executed.price,
                             'size': order.executed.size,
                             'bar_index': len(self.datas[0]),
@@ -869,9 +887,10 @@ class BacktestEngine:
                     return False
                 
                 # Add tracking for this evaluation
-                timestamp = self.datas[0].datetime.datetime(0)
+                timestamp_raw = self.datas[0].datetime.datetime(0)
+                timestamp_str = self._format_date(timestamp_raw)
                 bar_tracking = {
-                    'timestamp': timestamp,
+                    'timestamp': timestamp_str,
                     'bar_number': current_bar,
                     'conditions': []
                 }
@@ -998,9 +1017,10 @@ class BacktestEngine:
                     self.log(f"Position tracking: Entry bar not set, using default 0 bars in position")
                 
                 # Add tracking for this evaluation
-                timestamp = self.datas[0].datetime.datetime(0)
+                timestamp_raw = self.datas[0].datetime.datetime(0)
+                timestamp_str = self._format_date(timestamp_raw)
                 bar_tracking = {
-                    'timestamp': timestamp,
+                    'timestamp': timestamp_str,
                     'bar_number': current_bar,
                     'conditions': []
                 }
