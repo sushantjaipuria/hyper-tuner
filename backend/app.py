@@ -1771,15 +1771,29 @@ def generate_backtest_report(backtest_id):
         strategy_id = request.args.get('strategy_id')
         if not strategy_id:
             logger.error("Missing strategy_id parameter for backtest report")
-            return jsonify({"success": False, "error": "Missing strategy_id parameter"}), 400
+            return jsonify({
+                "success": False, 
+                "error": "Missing strategy_id parameter. Please ensure you provide a valid strategy ID."
+            }), 400
             
-        # Get the backtest results and strategy
+        # Get the backtest results and strategy with better error messages
         try:
             backtest_results = strategy_manager.get_backtest_results(strategy_id, backtest_id)
+        except Exception as e:
+            logger.error(f"Error retrieving backtest results: {str(e)}")
+            return jsonify({
+                "success": False, 
+                "error": f"Could not retrieve backtest data for backtest ID {backtest_id}: {str(e)}"
+            }), 404
+            
+        try:
             strategy = strategy_manager.get_strategy(strategy_id)
         except Exception as e:
-            logger.error(f"Error retrieving backtest data: {str(e)}")
-            return jsonify({"success": False, "error": f"Could not retrieve backtest data: {str(e)}"}), 404
+            logger.error(f"Error retrieving strategy: {str(e)}")
+            return jsonify({
+                "success": False, 
+                "error": f"Could not retrieve strategy with ID {strategy_id}: {str(e)}"
+            }), 404
         
         # Generate the report
         report_content = generate_backtest_report_markdown(strategy, backtest_results)
@@ -1792,7 +1806,10 @@ def generate_backtest_report(backtest_id):
         return response
     except Exception as e:
         logger.error(f"Error generating backtest report: {str(e)}")
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({
+            "success": False, 
+            "error": f"Error generating report: {str(e)}"
+        }), 500
 
 @app.route('/api/debug/optimization-results/<optimization_id>', methods=['GET'])
 def debug_optimization_results(optimization_id):

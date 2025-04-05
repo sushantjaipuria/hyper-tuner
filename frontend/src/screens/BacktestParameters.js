@@ -4,8 +4,15 @@ import KiteTokenExpiredModal from '../components/KiteTokenExpiredModal';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { formatLocalDate, getDateDebugInfo } from '../utils/dateUtils';
+import BacktestReportButton from '../components/BacktestReportButton';
 
-const BacktestParameters = ({ backtestParams, onSubmit, loading }) => {
+const BacktestParameters = ({ 
+  backtestParams, 
+  onSubmit, 
+  loading, 
+  backtestResults, // New prop 
+  strategyId       // New prop
+}) => {
   const { dataProvider, checkKiteToken, shouldVerifyToken } = useContext(DataSourceContext);
   const [showTokenExpiredModal, setShowTokenExpiredModal] = useState(false);
   
@@ -236,7 +243,7 @@ const BacktestParameters = ({ backtestParams, onSubmit, loading }) => {
           </ul>
         </div>
         
-        <div className="flex justify-end">
+        <div className="flex flex-col justify-end">
           <button
             type="submit"
             className="bg-blue-700 text-white px-6 py-3 rounded font-medium flex items-center disabled:bg-blue-300"
@@ -245,6 +252,15 @@ const BacktestParameters = ({ backtestParams, onSubmit, loading }) => {
           >
             {loading ? 'Running Backtest...' : 'Run Backtest & Continue'}
           </button>
+          
+          {/* Add the BacktestReportButton conditionally */}
+          {backtestResults && backtestResults.backtest_id && (
+            <BacktestReportButton
+              backtestId={backtestResults.backtest_id}
+              strategyId={strategyId}
+              className="mt-4" // Add margin-top for spacing between buttons
+            />
+          )}
         </div>
       </form>
     </div>

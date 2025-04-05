@@ -1,9 +1,16 @@
 import React, { useState } from 'react';
 
-const BacktestReportButton = ({ backtestId, strategyId }) => {
+const BacktestReportButton = ({ backtestId, strategyId, className }) => {
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   const handleGetBacktestReport = async () => {
+    // Validate required parameters
+    if (!backtestId || !strategyId) {
+      console.error('Missing required parameters:', { backtestId, strategyId });
+      alert('Cannot generate report: Missing backtest or strategy information.');
+      return;
+    }
+
     setIsGeneratingReport(true);
     try {
       console.log(`Generating backtest report for strategy ${strategyId}, backtest ${backtestId}`);
@@ -40,11 +47,14 @@ const BacktestReportButton = ({ backtestId, strategyId }) => {
     }
   };
 
+  // Disable the button if required parameters are missing
+  const isDisabled = !backtestId || !strategyId || isGeneratingReport;
+
   return (
     <button
       onClick={handleGetBacktestReport}
-      className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded font-medium flex items-center disabled:bg-green-300 mt-4"
-      disabled={isGeneratingReport}
+      className={`bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded font-medium flex items-center disabled:bg-green-300 ${className || ''}`}
+      disabled={isDisabled}
     >
       {isGeneratingReport ? 'Generating Report...' : 'Get Backtest Report'}
     </button>

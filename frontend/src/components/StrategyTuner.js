@@ -343,6 +343,8 @@ const StrategyTuner = () => {
             backtestParams={backtestParams}
             onSubmit={handleRunBacktest}
             loading={loading}
+            backtestResults={backtestResults}
+            strategyId={strategy.strategy_id}
           />
         )}
         
