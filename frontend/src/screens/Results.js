@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import BacktestReportButton from '../components/BacktestReportButton';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 
 // Component for side-by-side strategy comparison
@@ -538,7 +539,15 @@ const Results = ({ backtestResults, optimizationResults }) => {
       )}
       
       {/* Actions */}
-      <div className="flex justify-end space-x-4">
+      <div className="flex flex-wrap items-center justify-end space-x-4">
+        {backtestResults && backtestResults.backtest_id && (
+          <div className="mr-auto">
+            <BacktestReportButton
+              backtestId={backtestResults.backtest_id}
+              strategyId={backtestResults.strategy_id}
+            />
+          </div>
+        )}
         <button
           className="px-4 py-2 border border-blue-600 text-blue-600 rounded hover:bg-blue-50"
           onClick={() => {

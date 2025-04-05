@@ -1,5 +1,6 @@
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import BacktestReportButton from '../components/BacktestReportButton';
 
 const HyperTuning = ({ backtestResults, optimizationStatus, onStartOptimization, loading }) => {
   // Default metrics
@@ -213,8 +214,17 @@ const HyperTuning = ({ backtestResults, optimizationStatus, onStartOptimization,
         </div>
       )}
       
-      {/* Start Optimization Button */}
-      <div className="flex justify-end">
+      {/* Backtest Report and Start Optimization Buttons */}
+      <div className="flex justify-between items-center">
+        <div>
+          {backtestResults && backtestResults.backtest_id && (
+            <BacktestReportButton
+              backtestId={backtestResults.backtest_id}
+              strategyId={backtestResults.strategy_id}
+            />
+          )}
+        </div>
+        <div>
         <button
           className={`px-6 py-3 rounded font-medium ${
             loading || (optimizationStatus && optimizationStatus.status === 'completed')
@@ -232,6 +242,7 @@ const HyperTuning = ({ backtestResults, optimizationStatus, onStartOptimization,
             ? 'Optimization Running...'
             : 'Start Optimization'}
         </button>
+        </div>
       </div>
     </div>
   );

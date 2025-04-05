@@ -8,6 +8,7 @@ import io
 import os
 from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
+from report_generator import generate_backtest_report_markdown
 from config import (
     load_kite_config, save_kite_config, update_kite_access_token,
     get_available_kite_users, DEFAULT_KITE_USER
@@ -1760,6 +1761,37 @@ def export_optimization_csv(optimization_id):
         logger.error(f"Error generating CSV report: {str(e)}")
         import traceback
         logger.error(traceback.format_exc())
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/backtest-report/<backtest_id>', methods=['GET'])
+def generate_backtest_report(backtest_id):
+    """Generate a detailed markdown report for a completed backtest"""
+    try:
+        # Get the strategy_id from query parameters
+        strategy_id = request.args.get('strategy_id')
+        if not strategy_id:
+            logger.error("Missing strategy_id parameter for backtest report")
+            return jsonify({"success": False, "error": "Missing strategy_id parameter"}), 400
+            
+        # Get the backtest results and strategy
+        try:
+            backtest_results = strategy_manager.get_backtest_results(strategy_id, backtest_id)
+            strategy = strategy_manager.get_strategy(strategy_id)
+        except Exception as e:
+            logger.error(f"Error retrieving backtest data: {str(e)}")
+            return jsonify({"success": False, "error": f"Could not retrieve backtest data: {str(e)}"}), 404
+        
+        # Generate the report
+        report_content = generate_backtest_report_markdown(strategy, backtest_results)
+        
+        # Return as downloadable markdown file
+        response = Response(report_content, mimetype='text/markdown')
+        response.headers['Content-Disposition'] = f'attachment; filename=backtest_report_{backtest_id}.md'
+        
+        logger.info(f"Successfully generated backtest report for strategy {strategy_id}, backtest {backtest_id}")
+        return response
+    except Exception as e:
+        logger.error(f"Error generating backtest report: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/debug/optimization-results/<optimization_id>', methods=['GET'])
