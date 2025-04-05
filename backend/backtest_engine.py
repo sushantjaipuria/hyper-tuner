@@ -436,6 +436,7 @@ class BacktestEngine:
     def _format_datetime(self, dt_value):
         """
         Format a datetime value to string, handling various input types
+        Preserves timezone information when available
         
         Args:
             dt_value: Can be datetime object, string, or None
@@ -447,29 +448,56 @@ class BacktestEngine:
             return None
             
         try:
-            # If it's already a string, log and return as is
+            # If it's already a string, check if it has timezone info
             if isinstance(dt_value, str):
+                # Check if the string already contains timezone information
+                has_tz_info = '+05:30' in dt_value or ' IST' in dt_value
+                if not has_tz_info and ' ' in dt_value and len(dt_value) >= 16:
+                    # If it looks like a datetime string but doesn't have timezone, add IST indicator
+                    dt_value = dt_value + ' IST'
                 return log_date_conversion(
                     dt_value,
                     dt_value,
-                    "string datetime passthrough",
-                    extra_info={"context": "backtest_engine_format_datetime"}
+                    "string datetime passthrough with timezone check",
+                    extra_info={"context": "backtest_engine_format_datetime", "has_tz_info": has_tz_info}
                 )
                 
-            # If it's a datetime object, format it using our utility
+            # If it's a datetime object, format it using our utility and preserve timezone
             if isinstance(dt_value, datetime):
-                return safe_strftime(
-                    dt_value, 
-                    '%Y-%m-%d %H:%M:%S',
-                    extra_info={"context": "backtest_engine_format_datetime"}
-                )
+                # Check if the datetime object has timezone information
+                has_tz = dt_value.tzinfo is not None
+                self.logger.debug(f"Formatting datetime with timezone: {dt_value}, Has TZ: {has_tz}")
+                
+                if has_tz:
+                    # Use a format that includes timezone information
+                    result = safe_strftime(
+                        dt_value, 
+                        '%Y-%m-%d %H:%M:%S %Z',  # Include timezone
+                        extra_info={"context": "backtest_engine_format_datetime_with_tz"}
+                    )
+                else:
+                    # For naive datetime objects, format as before but append IST indicator
+                    base_result = safe_strftime(
+                        dt_value, 
+                        '%Y-%m-%d %H:%M:%S',
+                        extra_info={"context": "backtest_engine_format_datetime"}
+                    )
+                    # Append IST timezone indicator for naive datetimes
+                    result = base_result + ' IST'
+                    
+                return result
                 
             # Try to convert other types to string with logging
             result = str(dt_value)
+            # Check if the result appears to be a datetime but doesn't have timezone
+            if ' ' in result and len(result) >= 16 and not ('+05:30' in result or ' IST' in result):
+                # Try to append timezone for consistency
+                result = result + ' IST'
+                
             return log_date_conversion(
                 dt_value,
                 result,
-                f"conversion of {type(dt_value).__name__} to string",
+                f"conversion of {type(dt_value).__name__} to string with timezone handling",
                 extra_info={"context": "backtest_engine_format_datetime"}
             )
         except Exception as e:
@@ -653,14 +681,31 @@ class BacktestEngine:
                 
             
             def _format_date(self, dt_value):
-                """Format a datetime value to string"""
+                """Format a datetime value to string, preserving timezone"""
                 if dt_value is None:
                     return None
                     
                 try:
                     if isinstance(dt_value, datetime):
-                        return dt_value.strftime('%Y-%m-%d %H:%M:%S')
-                    return str(dt_value)
+                        # Check if the datetime object has timezone information
+                        has_tz = dt_value.tzinfo is not None
+                        
+                        if has_tz:
+                            # Use a format that includes timezone information
+                            return dt_value.strftime('%Y-%m-%d %H:%M:%S %Z')
+                        else:
+                            # For naive datetime objects, format and append IST indicator
+                            base_result = dt_value.strftime('%Y-%m-%d %H:%M:%S')
+                            # Append IST timezone indicator for naive datetimes
+                            return base_result + ' IST'
+                    
+                    # If not a datetime object, convert to string
+                    result = str(dt_value)
+                    # Check if it looks like a datetime string but doesn't have timezone
+                    if ' ' in result and len(result) >= 16 and not ('+05:30' in result or ' IST' in result):
+                        # Append timezone for consistency
+                        result = result + ' IST'
+                    return result
                 except Exception as e:
                     self.log(f"Error formatting datetime: {str(e)}")
                     return str(dt_value) if dt_value is not None else None

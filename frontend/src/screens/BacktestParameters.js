@@ -5,6 +5,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { formatLocalDate, getDateDebugInfo } from '../utils/dateUtils';
 import BacktestReportButton from '../components/BacktestReportButton';
+import IndicatorsDownloadButton from '../components/IndicatorsDownloadButton';
 
 const BacktestParameters = ({ 
   backtestParams, 
@@ -253,13 +254,21 @@ const BacktestParameters = ({
             {loading ? 'Running Backtest...' : 'Run Backtest & Continue'}
           </button>
           
-          {/* Add the BacktestReportButton conditionally */}
+          {/* Add the BacktestReportButton and IndicatorsDownloadButton conditionally */}
           {backtestResults && backtestResults.backtest_id && (
-            <BacktestReportButton
-              backtestId={backtestResults.backtest_id}
-              strategyId={strategyId}
-              className="mt-4" // Add margin-top for spacing between buttons
-            />
+            <div className="space-y-4 mt-4">
+              <BacktestReportButton
+                backtestId={backtestResults.backtest_id}
+                strategyId={strategyId}
+                className="w-full"
+              />
+              
+              <IndicatorsDownloadButton
+                backtestId={backtestResults.backtest_id}
+                strategyId={strategyId}
+                className="w-full"
+              />
+            </div>
           )}
         </div>
       </form>

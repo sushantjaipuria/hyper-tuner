@@ -8,9 +8,17 @@ logger = logging.getLogger(__name__)
 
 # Helper function to format datetime objects for json serialization
 def format_datetime(value):
-    """Format datetime objects to string for JSON serialization"""
+    """Format datetime objects to string for JSON serialization, preserving timezone"""
     if isinstance(value, datetime):
-        return value.strftime('%Y-%m-%d %H:%M:%S')
+        # Check if the datetime has timezone information
+        has_tz = value.tzinfo is not None
+        if has_tz:
+            # Format with timezone information
+            return value.strftime('%Y-%m-%d %H:%M:%S %Z')
+        else:
+            # For naive datetime objects, append IST indicator for consistency
+            base_result = value.strftime('%Y-%m-%d %H:%M:%S')
+            return base_result + ' IST'
     return value
 
 def generate_position_tracking_section(backtest_results):
@@ -31,6 +39,12 @@ Detailed position tracking information is not available for this backtest.
         for idx, position_event in enumerate(position_data, 1):
             action = position_event.get('action', 'N/A')
             timestamp = position_event.get('timestamp', 'N/A')
+            
+            # Ensure timestamp has timezone information for consistency
+            if timestamp != 'N/A' and not ('+05:30' in str(timestamp) or ' IST' in str(timestamp)):
+                # If timestamp doesn't already have timezone info, assume it's IST
+                timestamp = str(timestamp) + ' IST'
+                
             price = position_event.get('price', 0)
             size = position_event.get('size', 0)
             reason = position_event.get('reason', 'N/A')
@@ -56,10 +70,34 @@ Detailed position tracking information is not available for this backtest.
                     entry_time_str = format_datetime(entry_time) if isinstance(entry_time, datetime) else str(entry_time)
                     exit_time_str = format_datetime(exit_time) if isinstance(exit_time, datetime) else str(exit_time)
                     
-                    # Parse the string timestamps to datetime objects
-                    entry_dt = datetime.strptime(entry_time_str, '%Y-%m-%d %H:%M:%S')
-                    exit_dt = datetime.strptime(exit_time_str, '%Y-%m-%d %H:%M:%S')
-                    duration = (exit_dt - entry_dt).total_seconds() / 3600  # hours
+                    # Parse the string timestamps to datetime objects, handling timezone information
+                    try:
+                        # Try to parse with timezone info
+                        if ' IST' in entry_time_str:
+                            entry_time_str = entry_time_str.replace(' IST', '')
+                        if ' IST' in exit_time_str:
+                            exit_time_str = exit_time_str.replace(' IST', '')
+                            
+                        # Now parse without timezone for consistent duration calculation
+                        entry_dt = datetime.strptime(entry_time_str, '%Y-%m-%d %H:%M:%S')
+                        exit_dt = datetime.strptime(exit_time_str, '%Y-%m-%d %H:%M:%S')
+                        duration = (exit_dt - entry_dt).total_seconds() / 3600  # hours
+                    except ValueError:
+                        # If parsing fails with the basic format, try with more formats
+                        logger.debug(f"Trying alternative time format parsing for {entry_time_str} and {exit_time_str}")
+                        
+                        # Remove timezone indicators for parsing
+                        for format_str in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S %Z', '%Y-%m-%d %H:%M:%S+05:30']:
+                            try:
+                                entry_time_clean = entry_time_str.split('+')[0].strip()
+                                exit_time_clean = exit_time_str.split('+')[0].strip()
+                                
+                                entry_dt = datetime.strptime(entry_time_clean, format_str.split('+')[0].strip())
+                                exit_dt = datetime.strptime(exit_time_clean, format_str.split('+')[0].strip())
+                                duration = (exit_dt - entry_dt).total_seconds() / 3600  # hours
+                                break
+                            except ValueError:
+                                continue
                     
                     position_lifecycles.append({
                         'entry': entry_time,
@@ -241,7 +279,7 @@ def generate_parameters_section(backtest_results):
 
 - **Start Date**: {start_date}
 - **End Date**: {end_date}
-- **Initial Capital**: ${initial_capital:,.2f}
+- **Initial Capital**: ₹{initial_capital:,.2f}
 - **Backtest ID**: {backtest_results.get('backtest_id', 'Unknown')}
 """
         return content
@@ -311,7 +349,7 @@ def generate_execution_steps_section(strategy, backtest_results):
 The backtest engine follows these steps when executing a backtest:
 
 1. **Initialize Backtest Environment**
-   - Set up the backtest with initial capital of ${backtest_results.get('initial_capital', 0):,.2f}
+   - Set up the backtest with initial capital of ₹{backtest_results.get('initial_capital', 0):,.2f}
    - Configure date range: {backtest_results.get('start_date', 'Unknown')} to {backtest_results.get('end_date', 'Unknown')}
    - Set up commission structure (0% commission in the current implementation)
 
@@ -561,13 +599,45 @@ The table below shows how conditions were evaluated at key decision points:
                             eval_time_str = format_datetime(timestamp) if isinstance(timestamp, datetime) else str(timestamp)
                             trade_time_str = format_datetime(trade_time) if isinstance(trade_time, datetime) else str(trade_time)
                             
-                            # Now parse them
-                            eval_dt = datetime.strptime(eval_time_str, '%Y-%m-%d %H:%M:%S')
-                            trade_dt = datetime.strptime(trade_time_str, '%Y-%m-%d %H:%M:%S')
+                            # Clean the strings by removing timezone info for parsing
+                            eval_time_clean = eval_time_str
+                            trade_time_clean = trade_time_str
                             
-                            if abs((eval_dt - trade_dt).total_seconds()) < 3600:  # Within an hour
-                                is_trade_point = True
-                                break
+                            # Remove timezone indicators if present
+                            if ' IST' in eval_time_clean:
+                                eval_time_clean = eval_time_clean.replace(' IST', '')
+                            if ' IST' in trade_time_clean:
+                                trade_time_clean = trade_time_clean.replace(' IST', '')
+                            if '+05:30' in eval_time_clean:
+                                eval_time_clean = eval_time_clean.split('+')[0].strip()
+                            if '+05:30' in trade_time_clean:
+                                trade_time_clean = trade_time_clean.split('+')[0].strip()
+                                
+                            # Now parse them
+                            try:
+                                eval_dt = datetime.strptime(eval_time_clean, '%Y-%m-%d %H:%M:%S')
+                                trade_dt = datetime.strptime(trade_time_clean, '%Y-%m-%d %H:%M:%S')
+                                
+                                if abs((eval_dt - trade_dt).total_seconds()) < 3600:  # Within an hour
+                                    is_trade_point = True
+                                    break
+                            except ValueError as e:
+                                logger.debug(f"Error parsing timestamps: {e}, eval={eval_time_str}, trade={trade_time_str}")
+                                # Try one more time with a fallback approach if needed
+                                try:
+                                    # Just extract the date and hour:minute as a last resort
+                                    eval_date_parts = eval_time_clean.split()
+                                    trade_date_parts = trade_time_clean.split()
+                                    
+                                    if len(eval_date_parts) > 1 and len(trade_date_parts) > 1:
+                                        eval_simple = eval_date_parts[0] + ' ' + eval_date_parts[1].split(':')[0] + ':' + eval_date_parts[1].split(':')[1]
+                                        trade_simple = trade_date_parts[0] + ' ' + trade_date_parts[1].split(':')[0] + ':' + trade_date_parts[1].split(':')[1]
+                                        
+                                        if eval_simple == trade_simple:  # Compare as strings if they match
+                                            is_trade_point = True
+                                            break
+                                except Exception:
+                                    pass  # Last resort failed, continue to next comparison
                         except Exception as e:
                             logger.warning(f"Error comparing timestamps: {str(e)}")
                     
@@ -582,6 +652,11 @@ The table below shows how conditions were evaluated at key decision points:
                 
                 for eval_point in evals_to_show:
                     timestamp = eval_point.get('timestamp')
+                    # Ensure timestamp has timezone information for consistency
+                    if timestamp and not ('+05:30' in str(timestamp) or ' IST' in str(timestamp)):
+                        # If timestamp doesn't already have timezone info, assume it's IST
+                        timestamp = str(timestamp) + ' IST'
+                        
                     bar_num = eval_point.get('bar_number')
                     
                     for condition in eval_point.get('conditions', []):
@@ -668,13 +743,36 @@ No trades were executed during this backtest period.
                 
                 if entry_date and exit_date:
                     try:
-                        # Try to parse dates and calculate difference
-                        entry_dt = datetime.strptime(entry_date, '%Y-%m-%d %H:%M:%S')
-                        exit_dt = datetime.strptime(exit_date, '%Y-%m-%d %H:%M:%S')
-                        days_held = (exit_dt - entry_dt).days
-                        holding_periods.append(days_held)
+                        # Try to parse dates and calculate difference, handling timezone information
+                        # Remove timezone indicators for consistent parsing
+                        entry_date_clean = entry_date
+                        exit_date_clean = exit_date
+                        
+                        # Remove timezone indicators if present
+                        if ' IST' in entry_date_clean:
+                            entry_date_clean = entry_date_clean.replace(' IST', '')
+                        if ' IST' in exit_date_clean:
+                            exit_date_clean = exit_date_clean.replace(' IST', '')
+                            
+                        # Try to parse basic format
+                        try:
+                            entry_dt = datetime.strptime(entry_date_clean, '%Y-%m-%d %H:%M:%S')
+                            exit_dt = datetime.strptime(exit_date_clean, '%Y-%m-%d %H:%M:%S')
+                            days_held = (exit_dt - entry_dt).days
+                            holding_periods.append(days_held)
+                        except ValueError:
+                            # If basic format fails, try alternative formats by removing timezone parts
+                            logger.debug(f"Trying alternative format for {entry_date} and {exit_date}")
+                            entry_date_clean = entry_date.split('+')[0].strip() if '+' in entry_date else entry_date
+                            exit_date_clean = exit_date.split('+')[0].strip() if '+' in exit_date else exit_date
+                            
+                            entry_dt = datetime.strptime(entry_date_clean, '%Y-%m-%d %H:%M:%S')
+                            exit_dt = datetime.strptime(exit_date_clean, '%Y-%m-%d %H:%M:%S')
+                            days_held = (exit_dt - entry_dt).days
+                            holding_periods.append(days_held)
                     except Exception as e:
                         logger.warning(f"Error calculating holding period: {str(e)}")
+                        logger.debug(f"Failed to parse dates: entry={entry_date}, exit={exit_date}")
             
             avg_days_held = sum(holding_periods) / len(holding_periods) if holding_periods else "N/A"
         else:
@@ -687,8 +785,19 @@ No trades were executed during this backtest period.
         
         for idx, trade in enumerate(trades, 1):
             entry_date = trade.get('entry_date', 'N/A')
+            # Ensure entry_date has timezone information for consistency
+            if entry_date != 'N/A' and not ('+05:30' in str(entry_date) or ' IST' in str(entry_date)):
+                # If entry_date doesn't already have timezone info, assume it's IST
+                entry_date = str(entry_date) + ' IST'
+                
             entry_price = trade.get('entry_price', 0)
+            
             exit_date = trade.get('exit_date', 'N/A')
+            # Ensure exit_date has timezone information for consistency
+            if exit_date != 'N/A' and not ('+05:30' in str(exit_date) or ' IST' in str(exit_date)):
+                # If exit_date doesn't already have timezone info, assume it's IST
+                exit_date = str(exit_date) + ' IST'
+                
             exit_price = trade.get('exit_price', 0)
             profit_pct = trade.get('profit_pct', 0)
             profit_points = trade.get('profit_points', 0)
@@ -737,9 +846,9 @@ An equity curve showing the portfolio value over time is available in the backte
         metrics_section = f"""## 8. Performance Metrics
 
 ### Summary
-- **Initial Capital**: ${initial_capital:,.2f}
-- **Final Portfolio Value**: ${final_value:,.2f}
-- **Absolute Profit/Loss**: ${profit_amount:,.2f}
+- **Initial Capital**: ₹{initial_capital:,.2f}
+- **Final Portfolio Value**: ₹{final_value:,.2f}
+- **Absolute Profit/Loss**: ₹{profit_amount:,.2f}
 - **Return**: {returns:.2f}%
 - **Win Rate**: {win_rate:.2f}%
 - **Maximum Drawdown**: {max_drawdown:.2f}%
