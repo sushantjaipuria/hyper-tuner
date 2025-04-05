@@ -374,6 +374,8 @@ class BacktestEngine:
                 'trades': trades,
                 'equity_curve': self._safe_to_list(equity_curve),
                 'returns_series': self._safe_to_list(returns_series),
+                'condition_evaluations': getattr(strat, 'condition_evaluations', []),
+                'position_tracking': getattr(strat, 'position_tracking', []),
                 'summary': {
                     'returns': returns,
                     'win_rate': win_rate,
@@ -573,6 +575,10 @@ class BacktestEngine:
                 # Add position tracking to fix the 'barlen' issue
                 self.position_entry_bar = None  # Store the bar when a position is entered
                 
+                # Add condition tracking and position tracking storage
+                self.condition_evaluations = []
+                self.position_tracking = []
+                
                 # Parse entry conditions
                 self.entry_conditions = entry_conditions
                 
@@ -677,6 +683,17 @@ class BacktestEngine:
                         
                         # Store the current bar index for position tracking
                         self.position_entry_bar = len(self.datas[0])
+                        
+                        # Track position entry
+                        self.position_tracking.append({
+                            'action': 'ENTRY',
+                            'timestamp': self.datas[0].datetime.datetime(0),
+                            'price': order.executed.price,
+                            'size': order.executed.size,
+                            'bar_index': len(self.datas[0]),
+                            'reason': 'Entry conditions met',
+                            'portfolio_value': self.broker.getvalue()
+                        })
                     
                     elif order.issell():
                         self.log(f"SELL EXECUTED, Price: {order.executed.price:.2f}, Cost: {order.executed.value:.2f}, Comm: {order.executed.comm:.2f}")
@@ -692,6 +709,36 @@ class BacktestEngine:
                         else:  # sell strategy
                             self.current_trade['profit_points'] = self.buyprice - order.executed.price
                             self.current_trade['profit_pct'] = (self.buyprice / order.executed.price - 1) * 100
+                        
+                        # Determine exit reason
+                        exit_reason = 'Exit conditions met'
+                        
+                        # Check if exit was due to stop loss or take profit
+                        if hasattr(self, 'buyprice') and self.buyprice:
+                            price = order.executed.price
+                            if strategy_type == 'buy':
+                                profit_pct = (price / self.buyprice - 1) * 100
+                                loss_pct = (1 - price / self.buyprice) * 100
+                            else:  # sell strategy
+                                profit_pct = (1 - price / self.buyprice) * 100
+                                loss_pct = (price / self.buyprice - 1) * 100
+                            
+                            if self.target_profit > 0 and profit_pct >= self.target_profit:
+                                exit_reason = f'Take profit triggered ({profit_pct:.2f}%)'
+                            elif self.stop_loss > 0 and loss_pct >= self.stop_loss:
+                                exit_reason = f'Stop loss triggered ({loss_pct:.2f}%)'
+                        
+                        # Track position exit
+                        self.position_tracking.append({
+                            'action': 'EXIT',
+                            'timestamp': self.datas[0].datetime.datetime(0),
+                            'price': order.executed.price,
+                            'size': order.executed.size,
+                            'bar_index': len(self.datas[0]),
+                            'reason': exit_reason,
+                            'portfolio_value': self.broker.getvalue(),
+                            'profit_pct': self.current_trade['profit_pct']
+                        })
                         
                         # Add the completed trade to the trades list
                         self.trades.append(self.current_trade)
@@ -821,6 +868,17 @@ class BacktestEngine:
                 if current_bar < 30:  # Arbitrary threshold to ensure indicators have enough data
                     return False
                 
+                # Add tracking for this evaluation
+                timestamp = self.datas[0].datetime.datetime(0)
+                bar_tracking = {
+                    'timestamp': timestamp,
+                    'bar_number': current_bar,
+                    'conditions': []
+                }
+                
+                # Track if any condition evaluates to True
+                enter_trade = False
+                
                 # Parse and evaluate conditions
                 for condition in self.entry_conditions:
                     # Skip indicator definitions (these are just for adding indicators)
@@ -865,33 +923,67 @@ class BacktestEngine:
                                 self.log(f"Evaluating condition: {line_name} {comparison} {threshold} (current value: {var_value})")
                                 
                                 # Evaluate the condition
+                                condition_result = False
                                 if comparison == '>':
-                                    if var_value > threshold:
-                                        return True
+                                    condition_result = var_value > threshold
+                                    if condition_result:
+                                        enter_trade = True
                                 elif comparison == '>=':
-                                    if var_value >= threshold:
-                                        return True
+                                    condition_result = var_value >= threshold
+                                    if condition_result:
+                                        enter_trade = True
                                 elif comparison == '<':
-                                    if var_value < threshold:
-                                        return True
+                                    condition_result = var_value < threshold
+                                    if condition_result:
+                                        enter_trade = True
                                 elif comparison == '<=':
-                                    if var_value <= threshold:
-                                        return True
+                                    condition_result = var_value <= threshold
+                                    if condition_result:
+                                        enter_trade = True
                                 elif comparison == '==':
-                                    if var_value == threshold:
-                                        return True
+                                    condition_result = var_value == threshold
+                                    if condition_result:
+                                        enter_trade = True
                                 elif comparison == '!=':
-                                    if var_value != threshold:
-                                        return True
+                                    condition_result = var_value != threshold
+                                    if condition_result:
+                                        enter_trade = True
+                                
+                                # Track this condition evaluation
+                                try:
+                                    bar_tracking['conditions'].append({
+                                        'type': 'entry',
+                                        'variable': var_name,
+                                        'value': float(var_value) if not np.isnan(var_value) else None,
+                                        'comparison': comparison,
+                                        'threshold': threshold,
+                                        'result': condition_result
+                                    })
+                                except Exception as e:
+                                    self.log(f"Error tracking condition: {str(e)}")
                             else:
                                 # Log that we couldn't find the indicator line
                                 self.log(f"Warning: Indicator line '{var_name}' not found in data feed")
                                 # List available lines for debugging
                                 available_lines = dir(self.datas[0].lines)
                                 self.log(f"Available lines: {', '.join([l for l in available_lines if not l.startswith('_')])}")
+                                
+                                # Track the failed condition lookup
+                                bar_tracking['conditions'].append({
+                                    'type': 'entry',
+                                    'variable': var_name,
+                                    'value': None,
+                                    'comparison': condition.get('comparison', '>'),
+                                    'threshold': condition.get('threshold', 0),
+                                    'result': False,
+                                    'error': f"Variable not found in data feed"
+                                })
                 
-                # If no conditions triggered, return False
-                return False
+                # Add the entry evaluation to tracked history
+                self.condition_evaluations.append(bar_tracking)
+                
+                # Return the result
+                return enter_trade
             
             def _evaluate_exit_conditions(self):
                 """Evaluate exit conditions"""
@@ -904,6 +996,18 @@ class BacktestEngine:
                     self.log(f"Position tracking: Current bar: {current_bar}, Entry bar: {self.position_entry_bar}, Bars in position: {bars_in_position}")
                 else:
                     self.log(f"Position tracking: Entry bar not set, using default 0 bars in position")
+                
+                # Add tracking for this evaluation
+                timestamp = self.datas[0].datetime.datetime(0)
+                bar_tracking = {
+                    'timestamp': timestamp,
+                    'bar_number': current_bar,
+                    'conditions': []
+                }
+                
+                # Track if any condition evaluates to True
+                exit_trade = False
+                exit_reason = None
                 
                 # Parse and evaluate conditions
                 for condition in self.exit_conditions:
@@ -949,38 +1053,86 @@ class BacktestEngine:
                                 self.log(f"Evaluating exit condition: {line_name} {comparison} {threshold} (current value: {var_value})")
                                 
                                 # Evaluate the condition
+                                condition_result = False
                                 if comparison == '>':
-                                    if var_value > threshold:
-                                        return True
+                                    condition_result = var_value > threshold
+                                    if condition_result:
+                                        exit_trade = True
                                 elif comparison == '>=':
-                                    if var_value >= threshold:
-                                        return True
+                                    condition_result = var_value >= threshold
+                                    if condition_result:
+                                        exit_trade = True
                                 elif comparison == '<':
-                                    if var_value < threshold:
-                                        return True
+                                    condition_result = var_value < threshold
+                                    if condition_result:
+                                        exit_trade = True
                                 elif comparison == '<=':
-                                    if var_value <= threshold:
-                                        return True
+                                    condition_result = var_value <= threshold
+                                    if condition_result:
+                                        exit_trade = True
                                 elif comparison == '==':
-                                    if var_value == threshold:
-                                        return True
+                                    condition_result = var_value == threshold
+                                    if condition_result:
+                                        exit_trade = True
                                 elif comparison == '!=':
-                                    if var_value != threshold:
-                                        return True
+                                    condition_result = var_value != threshold
+                                    if condition_result:
+                                        exit_trade = True
+                                
+                                # Track this condition evaluation
+                                try:
+                                    bar_tracking['conditions'].append({
+                                        'type': 'exit',
+                                        'variable': var_name,
+                                        'value': float(var_value) if not np.isnan(var_value) else None,
+                                        'comparison': comparison,
+                                        'threshold': threshold,
+                                        'result': condition_result
+                                    })
+                                    
+                                    if condition_result:
+                                        exit_reason = f"Exit condition met: {var_name} {comparison} {threshold}"
+                                except Exception as e:
+                                    self.log(f"Error tracking condition: {str(e)}")
                             else:
                                 # Log that we couldn't find the indicator line
                                 self.log(f"Warning: Indicator line '{var_name}' not found in data feed")
                                 # List available lines for debugging
                                 available_lines = dir(self.datas[0].lines)
                                 self.log(f"Available lines: {', '.join([l for l in available_lines if not l.startswith('_')])}")
+                                
+                                # Track the failed condition lookup
+                                bar_tracking['conditions'].append({
+                                    'type': 'exit',
+                                    'variable': var_name,
+                                    'value': None,
+                                    'comparison': condition.get('comparison', '>'),
+                                    'threshold': condition.get('threshold', 0),
+                                    'result': False,
+                                    'error': f"Variable not found in data feed"
+                                })
                 
                 # If no conditions triggered, check if we've been in position too long
                 # as a failsafe - exit after 20 days in position if no other exit triggered
-                if bars_in_position > 20:
-                    self.log(f"Exit triggered by position duration: {bars_in_position} bars exceeds 20 bar limit")
-                    return True
+                if bars_in_position > 20 and not exit_trade:
+                    exit_trade = True
+                    exit_reason = f"Exit triggered by position duration: {bars_in_position} bars exceeds 20 bar limit"
+                    self.log(exit_reason)
                     
-                return False
+                    bar_tracking['conditions'].append({
+                        'type': 'exit',
+                        'variable': 'bars_in_position',
+                        'value': bars_in_position,
+                        'comparison': '>',
+                        'threshold': 20,
+                        'result': True
+                    })
+                
+                # Add the exit evaluation to tracked history
+                self.condition_evaluations.append(bar_tracking)
+                
+                # Return the result
+                return exit_trade
         
         return CustomStrategy
     

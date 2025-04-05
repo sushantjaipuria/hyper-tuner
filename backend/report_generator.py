@@ -6,6 +6,132 @@ import logging
 # Get the logger
 logger = logging.getLogger(__name__)
 
+def generate_position_tracking_section(backtest_results):
+    """Generate section about position tracking"""
+    try:
+        position_data = backtest_results.get('position_tracking', [])
+        
+        if not position_data:
+            return """## 9. Position Tracking
+
+Detailed position tracking information is not available for this backtest.
+"""
+        
+        # Generate position tracking table
+        position_table = "| # | Action | Timestamp | Price | Size | Reason | Portfolio Value |\n"
+        position_table += "|---|--------|-----------|-------|------|--------|---------------|\n"
+        
+        for idx, position_event in enumerate(position_data, 1):
+            action = position_event.get('action', 'N/A')
+            timestamp = position_event.get('timestamp', 'N/A')
+            price = position_event.get('price', 0)
+            size = position_event.get('size', 0)
+            reason = position_event.get('reason', 'N/A')
+            portfolio_value = position_event.get('portfolio_value', 0)
+            
+            row = f"| {idx} | {action} | {timestamp} | {price:.2f} | {size:.2f} | {reason} | {portfolio_value:.2f} |\n"
+            position_table += row
+        
+        # Create a position lifecycle visualization (hold duration)
+        position_lifecycles = []
+        current_entry = None
+        
+        for event in position_data:
+            action = event.get('action', '')
+            if action == 'ENTRY':
+                current_entry = event
+            elif action == 'EXIT' and current_entry:
+                entry_time = current_entry.get('timestamp')
+                exit_time = event.get('timestamp')
+                
+                try:
+                    if isinstance(entry_time, str) and isinstance(exit_time, str):
+                        entry_dt = datetime.strptime(entry_time, '%Y-%m-%d %H:%M:%S')
+                        exit_dt = datetime.strptime(exit_time, '%Y-%m-%d %H:%M:%S')
+                        duration = (exit_dt - entry_dt).total_seconds() / 3600  # hours
+                        
+                        position_lifecycles.append({
+                            'entry': entry_time,
+                            'exit': exit_time,
+                            'duration_hours': duration,
+                            'entry_price': current_entry.get('price', 0),
+                            'exit_price': event.get('price', 0),
+                            'profit_pct': event.get('profit_pct', 0)
+                        })
+                except Exception as e:
+                    logger.warning(f"Error calculating position duration: {str(e)}")
+                
+                current_entry = None
+        
+        # Generate duration statistics
+        duration_stats = ""
+        if position_lifecycles:
+            durations = [p['duration_hours'] for p in position_lifecycles]
+            avg_duration = sum(durations) / len(durations)
+            min_duration = min(durations)
+            max_duration = max(durations)
+            
+            # Format durations for readability
+            if avg_duration >= 24:
+                avg_duration_str = f"{avg_duration/24:.2f} days"
+            else:
+                avg_duration_str = f"{avg_duration:.2f} hours"
+                
+            if min_duration >= 24:
+                min_duration_str = f"{min_duration/24:.2f} days"
+            else:
+                min_duration_str = f"{min_duration:.2f} hours"
+                
+            if max_duration >= 24:
+                max_duration_str = f"{max_duration/24:.2f} days"
+            else:
+                max_duration_str = f"{max_duration:.2f} hours"
+            
+            # Calculate profitability by hold time
+            profitable_positions = [p for p in position_lifecycles if p['profit_pct'] > 0]
+            unprofitable_positions = [p for p in position_lifecycles if p['profit_pct'] <= 0]
+            
+            avg_profitable_duration = sum([p['duration_hours'] for p in profitable_positions]) / len(profitable_positions) if profitable_positions else 0
+            avg_unprofitable_duration = sum([p['duration_hours'] for p in unprofitable_positions]) / len(unprofitable_positions) if unprofitable_positions else 0
+            
+            if avg_profitable_duration >= 24:
+                avg_profitable_str = f"{avg_profitable_duration/24:.2f} days"
+            else:
+                avg_profitable_str = f"{avg_profitable_duration:.2f} hours"
+                
+            if avg_unprofitable_duration >= 24:
+                avg_unprofitable_str = f"{avg_unprofitable_duration/24:.2f} days"
+            else:
+                avg_unprofitable_str = f"{avg_unprofitable_duration:.2f} hours"
+            
+            duration_stats = f"""
+### Position Duration Statistics
+- **Average Position Duration**: {avg_duration_str}
+- **Shortest Position**: {min_duration_str}
+- **Longest Position**: {max_duration_str}
+- **Average Duration of Profitable Trades**: {avg_profitable_str}
+- **Average Duration of Unprofitable Trades**: {avg_unprofitable_str}
+"""
+        
+        position_section = f"""## 9. Position Tracking
+
+### Position Events
+{position_table}
+
+{duration_stats}
+
+### Position Management
+The engine managed positions according to the strategy rules:
+- Entries were triggered when entry conditions were met
+- Exits were triggered by exit conditions, stop loss, or take profit
+- All positions were managed with the default position sizing (1 unit)
+- Position tracking helps identify patterns between hold duration and profitability
+"""
+        return position_section
+    except Exception as e:
+        logger.error(f"Error generating position tracking section: {str(e)}")
+        return "## 9. Position Tracking\n\nError generating position tracking section"
+
 def generate_backtest_report_markdown(strategy, backtest_results):
     """
     Generate a comprehensive markdown report for a backtest
@@ -36,14 +162,17 @@ def generate_backtest_report_markdown(strategy, backtest_results):
         # 5. Indicator Calculations
         sections.append(generate_indicators_section(strategy, backtest_results))
         
-        # 6. Condition Evaluations
-        sections.append(generate_conditions_section(strategy))
+        # 6. Condition Evaluations - Pass backtest_results to include condition tracking
+        sections.append(generate_conditions_section(strategy, backtest_results))
         
         # 7. Trades
         sections.append(generate_trades_section(backtest_results))
         
         # 8. Performance Metrics
         sections.append(generate_metrics_section(backtest_results))
+        
+        # 9. Position Tracking - NEW SECTION
+        sections.append(generate_position_tracking_section(backtest_results))
         
         # Combine all sections
         report_content = "\n\n".join(sections)
@@ -308,8 +437,8 @@ The following technical indicators were used in this strategy:
         logger.error(f"Error generating indicators section: {str(e)}")
         return "## 5. Indicator Calculations\n\nError generating indicators section"
 
-def generate_conditions_section(strategy):
-    """Generate section about entry and exit conditions"""
+def generate_conditions_section(strategy, backtest_results=None):
+    """Generate section about entry and exit conditions with tracking"""
     try:
         entry_conditions = strategy.get('entry_conditions', [])
         exit_conditions = strategy.get('exit_conditions', [])
@@ -376,6 +505,105 @@ When in a position, the engine evaluates:
 3. If any exit condition is met, exits the position completely
 """
         
+        # Add condition tracking section
+        condition_tracking = ""
+        
+        # Check if we have backtest results and condition evaluation data
+        if backtest_results and 'condition_evaluations' in backtest_results:
+            condition_evals = backtest_results.get('condition_evaluations', [])
+            if condition_evals:
+                condition_tracking = """
+### Condition Evaluation Tracking
+
+The table below shows how conditions were evaluated at key decision points:
+
+| Bar | Timestamp | Condition | Variable | Value | Comparison | Threshold | Result |
+|-----|-----------|-----------|----------|-------|------------|-----------|--------|
+"""
+                # Filter to just include significant evaluation points (where trades occurred)
+                trade_timestamps = set()
+                for trade in backtest_results.get('trades', []):
+                    entry_date = trade.get('entry_date')
+                    exit_date = trade.get('exit_date')
+                    if entry_date:
+                        trade_timestamps.add(entry_date)
+                    if exit_date:
+                        trade_timestamps.add(exit_date)
+                
+                # Add evaluations near trade points or a limited sample
+                num_tracked = 0
+                trade_related_evals = []
+                sample_evals = []
+                
+                for eval_point in condition_evals:
+                    timestamp = eval_point.get('timestamp')
+                    if not timestamp:
+                        continue
+                        
+                    bar_num = eval_point.get('bar_number')
+                    
+                    # Check if this is near a trade timestamp
+                    is_trade_point = False
+                    for trade_time in trade_timestamps:
+                        try:
+                            eval_dt = datetime.strptime(str(timestamp), '%Y-%m-%d %H:%M:%S') if isinstance(timestamp, str) else timestamp
+                            trade_dt = datetime.strptime(trade_time, '%Y-%m-%d %H:%M:%S')
+                            if abs((eval_dt - trade_dt).total_seconds()) < 3600:  # Within an hour
+                                is_trade_point = True
+                                break
+                        except Exception as e:
+                            logger.warning(f"Error comparing timestamps: {str(e)}")
+                    
+                    if is_trade_point:
+                        trade_related_evals.append(eval_point)
+                    elif len(sample_evals) < 10:  # Keep a small sample of non-trade points
+                        sample_evals.append(eval_point)
+                
+                # Prioritize trade-related evaluations
+                evals_to_show = trade_related_evals + sample_evals
+                evals_to_show = evals_to_show[:20]  # Limit to a reasonable number
+                
+                for eval_point in evals_to_show:
+                    timestamp = eval_point.get('timestamp')
+                    bar_num = eval_point.get('bar_number')
+                    
+                    for condition in eval_point.get('conditions', []):
+                        condition_type = condition.get('type', '')
+                        variable = condition.get('variable', '')
+                        value = condition.get('value', '')
+                        comparison = condition.get('comparison', '')
+                        threshold = condition.get('threshold', '')
+                        result = condition.get('result', False)
+                        
+                        # Format the value for display
+                        value_str = 'N/A'
+                        if value is not None:
+                            try:
+                                value_str = f"{float(value):.4f}" if isinstance(value, (int, float)) else str(value)
+                            except:
+                                value_str = str(value)
+                        
+                        # Add a row to the table
+                        condition_tracking += f"| {bar_num} | {timestamp} | {condition_type.capitalize()} | {variable} | {value_str} | {comparison} | {threshold} | {'✓' if result else '✗'} |\n"
+                        
+                        num_tracked += 1
+                
+                if num_tracked == 0:
+                    condition_tracking += "| - | - | No condition evaluations available | - | - | - | - | - |\n"
+            else:
+                condition_tracking = """
+### Condition Evaluation Tracking
+
+Detailed condition evaluation tracking is not available for this backtest run.
+"""
+        else:
+            condition_tracking = """
+### Condition Evaluation Tracking
+
+Detailed condition evaluation tracking is not available for this backtest.
+"""
+        
+        # Create the complete section
         conditions_section = f"""## 6. Condition Evaluations
 
 {entry_content}
@@ -385,6 +613,8 @@ When in a position, the engine evaluates:
 {risk_management}
 
 {evaluation_explanation}
+
+{condition_tracking}
 """
         return conditions_section
     except Exception as e:
