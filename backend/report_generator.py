@@ -10,13 +10,13 @@ from datetime import datetime
 from typing import Dict, Any
 from market_calendar import format_market_time
 
-def generate_backtest_report(backtest_results: Dict[str, Any], strategy: Dict[str, Any]) -> str:
+def generate_backtest_report_markdown(strategy: Dict[str, Any], backtest_results: Dict[str, Any]) -> str:
     """
     Generate a comprehensive backtest report in markdown format
     
     Args:
-        backtest_results (dict): Results from backtest engine
         strategy (dict): Strategy configuration
+        backtest_results (dict): Results from backtest engine
         
     Returns:
         str: Markdown formatted report
@@ -189,7 +189,7 @@ def save_backtest_report(backtest_results, strategy, output_dir=None):
         str: Path to the generated report file
     """
     # Generate the report
-    report_content = generate_backtest_report(backtest_results, strategy)
+    report_content = generate_backtest_report_markdown(backtest_results, strategy)
     
     # Create output directory if it doesn't exist
     if output_dir is None:
@@ -209,3 +209,6 @@ def save_backtest_report(backtest_results, strategy, output_dir=None):
         f.write(report_content)
     
     return filepath
+
+# Add alias for backward compatibility with existing code
+generate_backtest_report = generate_backtest_report_markdown
