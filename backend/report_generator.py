@@ -241,7 +241,7 @@ def generate_parameters_section(backtest_results):
 
 - **Start Date**: {start_date}
 - **End Date**: {end_date}
-- **Initial Capital**: ${initial_capital:,.2f}
+- **Initial Capital**: ₹{initial_capital:,.2f}
 - **Backtest ID**: {backtest_results.get('backtest_id', 'Unknown')}
 """
         return content
@@ -311,7 +311,7 @@ def generate_execution_steps_section(strategy, backtest_results):
 The backtest engine follows these steps when executing a backtest:
 
 1. **Initialize Backtest Environment**
-   - Set up the backtest with initial capital of ${backtest_results.get('initial_capital', 0):,.2f}
+   - Set up the backtest with initial capital of ₹{backtest_results.get('initial_capital', 0):,.2f}
    - Configure date range: {backtest_results.get('start_date', 'Unknown')} to {backtest_results.get('end_date', 'Unknown')}
    - Set up commission structure (0% commission in the current implementation)
 
@@ -737,9 +737,9 @@ An equity curve showing the portfolio value over time is available in the backte
         metrics_section = f"""## 8. Performance Metrics
 
 ### Summary
-- **Initial Capital**: ${initial_capital:,.2f}
-- **Final Portfolio Value**: ${final_value:,.2f}
-- **Absolute Profit/Loss**: ${profit_amount:,.2f}
+- **Initial Capital**: ₹{initial_capital:,.2f}
+- **Final Portfolio Value**: ₹{final_value:,.2f}
+- **Absolute Profit/Loss**: ₹{profit_amount:,.2f}
 - **Return**: {returns:.2f}%
 - **Win Rate**: {win_rate:.2f}%
 - **Maximum Drawdown**: {max_drawdown:.2f}%
