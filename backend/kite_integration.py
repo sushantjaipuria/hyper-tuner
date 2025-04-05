@@ -333,6 +333,29 @@ class KiteIntegration(DataProvider):
                 'volume': 'volume'
             }, inplace=True)
             
+            # Convert datetime column to timezone-aware datetime objects
+            try:
+                # Handle timezone information - Kite data already has +05:30 timezone info
+                # We want to preserve this information when converting to pandas datetime
+                self.logger.info("Converting datetime column to timezone-aware datetime objects")
+                df['datetime'] = pd.to_datetime(df['datetime'], utc=False)
+                
+                # Check if timezone was properly detected
+                sample_dt = df['datetime'].iloc[0] if not df.empty else None
+                has_tz = sample_dt.tzinfo is not None if sample_dt is not None else False
+                self.logger.info(f"Sample datetime after conversion: {sample_dt}, Has timezone: {has_tz}")
+                
+                # If timezone wasn't automatically detected, explicitly set it to IST
+                if not has_tz:
+                    import pytz
+                    ist_timezone = pytz.timezone('Asia/Kolkata')
+                    df['datetime'] = df['datetime'].dt.tz_localize(ist_timezone)
+                    self.logger.info(f"Explicitly set timezone to IST (Asia/Kolkata)")
+            except Exception as e:
+                self.logger.warning(f"Error handling timezone in datetime column: {str(e)}")
+                # Continue with the original column if there was an error
+                self.logger.info("Falling back to original datetime handling without timezone")
+            
             # Set datetime as index
             df.set_index('datetime', inplace=True)
             
