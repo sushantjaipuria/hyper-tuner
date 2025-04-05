@@ -2,13 +2,14 @@ import logging
 from datetime import datetime, timedelta
 from kite_integration import KiteIntegration, DEFAULT_KITE_USER
 from yahoo_finance_integration import YahooFinanceIntegration
+from logging_config import get_logger
 
 class DataProviderFactory:
     """Factory class for creating data providers"""
     
     def __init__(self):
         """Initialize the factory"""
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__)
         self._provider = None
         self._provider_name = None
         self._provider_user = None  # Add tracking for user ID

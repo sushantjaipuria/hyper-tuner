@@ -70,10 +70,39 @@ const StrategyTuner = () => {
       const updatedParams = { ...backtestParams, ...backtestData };
       setBacktestParams(updatedParams);
       
-      // Run backtest
-      const response = await api.runBacktest({
+      // Debug log before API call
+      console.log('DATE_DEBUG - Pre-API Call in StrategyTuner:', {
+        receivedBacktestData: backtestData,
+        updatedParams,
+        originalBacktestParams: backtestParams,
+        strategy_id: strategy.strategy_id
+      });
+      
+      // Create the full request payload
+      const requestPayload = {
         strategy_id: strategy.strategy_id,
         ...updatedParams
+      };
+      
+      // Debug log the final request
+      console.log('DATE_DEBUG - Final API request payload:', {
+        requestPayload,
+        startDate: requestPayload.start_date,
+        startDateType: typeof requestPayload.start_date,
+        endDate: requestPayload.end_date,
+        endDateType: typeof requestPayload.end_date,
+        requestTimestamp: new Date().toISOString()
+      });
+      
+      // Run backtest
+      const response = await api.runBacktest(requestPayload);
+      
+      // Debug log response
+      console.log('DATE_DEBUG - API response:', {
+        responseSuccess: response.success,
+        backtest_id: response.backtest_id,
+        summary: response.summary,
+        responseTimestamp: new Date().toISOString()
       });
       
       // Update backtest results
@@ -85,6 +114,7 @@ const StrategyTuner = () => {
       }
     } catch (err) {
       setError(err.message || 'An error occurred');
+      console.error('DATE_DEBUG - API call error:', err);
     } finally {
       setLoading(false);
     }
@@ -313,6 +343,8 @@ const StrategyTuner = () => {
             backtestParams={backtestParams}
             onSubmit={handleRunBacktest}
             loading={loading}
+            backtestResults={backtestResults}
+            strategyId={strategy.strategy_id}
           />
         )}
         

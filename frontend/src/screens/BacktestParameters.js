@@ -3,8 +3,16 @@ import { DataSourceContext } from '../context/DataSourceContext';
 import KiteTokenExpiredModal from '../components/KiteTokenExpiredModal';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import { formatLocalDate, getDateDebugInfo } from '../utils/dateUtils';
+import BacktestReportButton from '../components/BacktestReportButton';
 
-const BacktestParameters = ({ backtestParams, onSubmit, loading }) => {
+const BacktestParameters = ({ 
+  backtestParams, 
+  onSubmit, 
+  loading, 
+  backtestResults, // New prop 
+  strategyId       // New prop
+}) => {
   const { dataProvider, checkKiteToken, shouldVerifyToken } = useContext(DataSourceContext);
   const [showTokenExpiredModal, setShowTokenExpiredModal] = useState(false);
   
@@ -39,9 +47,9 @@ const BacktestParameters = ({ backtestParams, onSubmit, loading }) => {
   
   // Handle form submission
   const handleSubmit = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     
-    // Validate form
+    // Validation
     const formErrors = {};
     
     if (!initialCapital || initialCapital <= 0) {
@@ -56,7 +64,7 @@ const BacktestParameters = ({ backtestParams, onSubmit, loading }) => {
       formErrors.endDate = 'End date is required';
     }
     
-    if (startDate && endDate && startDate >= endDate) {
+    if (startDate && endDate && startDate > endDate) {
       formErrors.dateRange = 'End date must be after start date';
     }
     
@@ -65,16 +73,71 @@ const BacktestParameters = ({ backtestParams, onSubmit, loading }) => {
       return;
     }
     
-    // Format dates
-    const formattedStartDate = startDate.toISOString().split('T')[0];
-    const formattedEndDate = endDate.toISOString().split('T')[0];
+    // Debug log original date objects with enhanced debug info
+    console.log('DATE_DEBUG - Original date objects:', {
+      startDate: getDateDebugInfo(startDate),
+      endDate: getDateDebugInfo(endDate)
+    });
+    
+    // Format dates using local date components instead of ISO string
+    const formattedStartDate = formatLocalDate(startDate);
+    const formattedEndDate = formatLocalDate(endDate);
+    
+    // Debug log formatted dates with enhanced info
+    console.log('DATE_DEBUG - User selected dates after formatting:', {
+      startDate: {
+        displayValue: formattedStartDate,
+        rawValue: startDate,
+        originalISOString: startDate.toISOString(),
+        formattingMethod: 'formatLocalDate() using local date components',
+        dateParts: {
+          year: startDate.getFullYear(),
+          month: startDate.getMonth() + 1, // +1 because getMonth() is 0-indexed
+          day: startDate.getDate(),
+          hours: startDate.getHours(),
+          minutes: startDate.getMinutes(),
+          seconds: startDate.getSeconds()
+        }
+      },
+      endDate: {
+        displayValue: formattedEndDate,
+        rawValue: endDate,
+        originalISOString: endDate.toISOString(),
+        formattingMethod: 'formatLocalDate() using local date components',
+        dateParts: {
+          year: endDate.getFullYear(),
+          month: endDate.getMonth() + 1, // +1 because getMonth() is 0-indexed
+          day: endDate.getDate(),
+          hours: endDate.getHours(),
+          minutes: endDate.getMinutes(),
+          seconds: endDate.getSeconds()
+        }
+      },
+      dateInfo: {
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        locale: navigator.language,
+        browserDateTime: new Date().toString()
+      }
+    });
     
     // Prepare backtest parameters
     const backtestData = {
       initial_capital: Number(initialCapital),
       start_date: formattedStartDate,
-      end_date: formattedEndDate
+      end_date: formattedEndDate,
+      // Add a special marker for backend to detect this is from the Run Backtest button
+      _debug_date_tracking: true
     };
+    
+    // Debug log final data being sent to backend
+    console.log('DATE_DEBUG - Dates being sent to backend:', {
+      startDate: formattedStartDate,
+      endDate: formattedEndDate,
+      fullRequestBody: backtestData,
+      runTimestamp: new Date().toISOString(),
+      sourceButtonId: 'run-backtest-continue',
+      dateMethodUsed: 'formatLocalDate'
+    });
     
     // Submit backtest parameters
     onSubmit(backtestData);
@@ -180,14 +243,24 @@ const BacktestParameters = ({ backtestParams, onSubmit, loading }) => {
           </ul>
         </div>
         
-        <div className="flex justify-end">
+        <div className="flex flex-col justify-end">
           <button
             type="submit"
             className="bg-blue-700 text-white px-6 py-3 rounded font-medium flex items-center disabled:bg-blue-300"
             disabled={loading}
+            id="run-backtest-continue"
           >
             {loading ? 'Running Backtest...' : 'Run Backtest & Continue'}
           </button>
+          
+          {/* Add the BacktestReportButton conditionally */}
+          {backtestResults && backtestResults.backtest_id && (
+            <BacktestReportButton
+              backtestId={backtestResults.backtest_id}
+              strategyId={strategyId}
+              className="mt-4" // Add margin-top for spacing between buttons
+            />
+          )}
         </div>
       </form>
     </div>

@@ -3,20 +3,43 @@ import numpy as np
 import backtrader as bt
 import uuid
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 import tempfile
 import os
+import json
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+import base64
+import io
+from debug_utils import save_strategy_debug_info, save_strategy_comparison
 
 from indicators import Indicators
+from data_provider import DataProvider
+from utils import safe_strftime, format_date_for_api, log_date_conversion
+from logging_config import get_logger
 
 class BacktestEngine:
     """Class to handle backtesting of trading strategies"""
     
     def __init__(self, data_provider):
-        """Initialize the Backtest Engine"""
-        self.logger = logging.getLogger(__name__)
+        """
+        Initialize the backtest engine with a data provider
+        
+        Args:
+            data_provider (DataProvider): An instance of a class implementing the DataProvider interface
+        """
         self.data_provider = data_provider
+        self.logger = get_logger(__name__)
+        self.logger.info("BacktestEngine initialized")
         self.indicators = Indicators()
+        
+        # For tracking Backtrader's interpretation of strategies
+        self.backtrader_interpretation = {
+            'strategy_params': {},
+            'indicators': {},
+            'data_feed': {},
+            'conditions': {}
+        }
     
     def _safe_to_list(self, value):
         """
@@ -61,6 +84,18 @@ class BacktestEngine:
             dict: Backtest results
         """
         try:
+            # Add debug logging for dates and initial capital at the start
+            self.logger.info(f"BACKTEST ENGINE START: Backtesting period from {start_date} to {end_date}")
+            self.logger.info(f"BACKTEST ENGINE START: Using initial_capital={initial_capital} (type: {type(initial_capital).__name__})")
+            
+            # Reset backtrader interpretation for this run
+            self.backtrader_interpretation = {
+                'strategy_params': {},
+                'indicators': {},
+                'data_feed': {},
+                'conditions': {}
+            }
+            
             # Get strategy details
             strategy_id = strategy['strategy_id']
             strategy_name = strategy['name']
@@ -82,6 +117,12 @@ class BacktestEngine:
             if data.empty:
                 self.logger.error(f"No historical data found for {symbol} from {start_date} to {end_date}")
                 raise ValueError(f"No historical data found for {symbol} from {start_date} to {end_date}. Please check the symbol and date range.")
+                
+            # Log actual data range
+            if not data.empty:
+                data_start = data.index.min().strftime('%Y-%m-%d') if hasattr(data.index.min(), 'strftime') else str(data.index.min())
+                data_end = data.index.max().strftime('%Y-%m-%d') if hasattr(data.index.max(), 'strftime') else str(data.index.max())
+                self.logger.info(f"DATA RANGE: Retrieved {len(data)} data points from {data_start} to {data_end}")
                 
             # Check if close column exists and has valid data
             if 'close' not in data.columns:
@@ -105,6 +146,39 @@ class BacktestEngine:
             
             self.logger.info(f"Adding {len(indicator_configs)} indicators to data")
             data_with_indicators = self.indicators.add_all_indicators(data, indicator_configs)
+            
+            # Track indicator processing for debugging
+            indicator_processing = {}
+            for condition in indicator_configs:
+                if 'indicator' in condition and 'variable' in condition:
+                    indicator = condition['indicator']
+                    variable = condition['variable']
+                    params = condition.get('params', {})
+                    
+                    # For debugging, get sanitized variable name that might have been used
+                    safe_var_name = ''.join(c if c.isalnum() or c == '_' else '_' for c in variable)
+                    if not safe_var_name[0].isalpha() and safe_var_name[0] != '_':
+                        safe_var_name = 'ind_' + safe_var_name
+                    
+                    # Check both variable names
+                    if variable in data_with_indicators.columns:
+                        actual_var = variable
+                    elif safe_var_name in data_with_indicators.columns:
+                        actual_var = safe_var_name
+                    else:
+                        actual_var = None
+                    
+                    indicator_processing[variable] = {
+                        'indicator_type': indicator,
+                        'parameters': params,
+                        'column_name': variable,
+                        'sanitized_name': safe_var_name,
+                        'found_in_data': actual_var is not None,
+                        'actual_column': actual_var,
+                        'sample_values': data_with_indicators[actual_var].head(3).tolist() if actual_var is not None and not data_with_indicators.empty else []
+                    }
+            
+            self.backtrader_interpretation['indicators'] = indicator_processing
             
             # Validate that all required indicators were added
             entry_indicator_vars = []
@@ -168,6 +242,9 @@ class BacktestEngine:
                     stop_loss, 
                     target_profit
                 )
+                
+                # We'll save debug information at the end after we have results
+                
             except Exception as e:
                 self.logger.error(f"Failed to create Backtrader strategy class: {str(e)}")
                 raise ValueError(f"Failed to create strategy class: {str(e)}. Please check your strategy configuration.")
@@ -189,8 +266,11 @@ class BacktestEngine:
             # Set initial cash
             cerebro.broker.setcash(initial_capital)
             
-            # Set commission (0.1%)
-            cerebro.broker.setcommission(commission=0.001)
+            # Add debug logging after setting initial cash
+            self.logger.info(f"BACKTEST ENGINE CEREBRO: Set initial_capital={initial_capital}, Cerebro cash={cerebro.broker.getcash()}")
+            
+            # Set commission (0%)
+            cerebro.broker.setcommission(commission=0)
             
             # Run backtest
             self.logger.info(f"Running backtest for strategy {strategy_name}...")
@@ -200,6 +280,17 @@ class BacktestEngine:
             # Get backtest results
             portfolio_value = cerebro.broker.getvalue()
             returns = (portfolio_value - initial_capital) / initial_capital * 100
+            
+            # Add debug logging with dates, initial capital and final value
+            self.logger.info(f"BACKTEST ENGINE END: Completed backtest from {start_date} to {end_date}")
+            self.logger.info(f"BACKTEST ENGINE END: Backtest completed with initial_capital={initial_capital}, final_value={portfolio_value}, returns={returns:.2f}%")
+            
+            # Add additional summary of data range used
+            if not data.empty:
+                data_start = data.index.min().strftime('%Y-%m-%d') if hasattr(data.index.min(), 'strftime') else str(data.index.min())
+                data_end = data.index.max().strftime('%Y-%m-%d') if hasattr(data.index.max(), 'strftime') else str(data.index.max())
+                self.logger.info(f"BACKTEST DATA SUMMARY: Data used for backtest spans from {data_start} to {data_end}")
+                self.logger.info(f"BACKTEST DATA SUMMARY: Contains {len(data)} data points for symbol {symbol}")
             
             # Get all trades
             trades = []
@@ -283,6 +374,8 @@ class BacktestEngine:
                 'trades': trades,
                 'equity_curve': self._safe_to_list(equity_curve),
                 'returns_series': self._safe_to_list(returns_series),
+                'condition_evaluations': getattr(strat, 'condition_evaluations', []),
+                'position_tracking': getattr(strat, 'position_tracking', []),
                 'summary': {
                     'returns': returns,
                     'win_rate': win_rate,
@@ -293,6 +386,18 @@ class BacktestEngine:
             }
                 
                 self.logger.info(f"Backtest completed: Returns: {returns:.2f}%, Win Rate: {win_rate:.2f}, Sharpe: {sharpe_ratio:.2f}")
+                
+                # Now save strategy comparison with the results
+                self.logger.info("Saving strategy comparison...")
+                debug_file = save_strategy_comparison(
+                    strategy, 
+                    bt_strategy_class, 
+                    self.backtrader_interpretation,
+                    self.logger, 
+                    backtest_results
+                )
+                self.logger.info(f"Strategy comparison saved to {debug_file}")
+                
                 return backtest_results
             except Exception as e:
                 self.logger.error(f"Error preparing backtest results: {str(e)}")
@@ -342,19 +447,40 @@ class BacktestEngine:
             return None
             
         try:
-            # If it's already a string, return as is
+            # If it's already a string, log and return as is
             if isinstance(dt_value, str):
-                return dt_value
+                return log_date_conversion(
+                    dt_value,
+                    dt_value,
+                    "string datetime passthrough",
+                    extra_info={"context": "backtest_engine_format_datetime"}
+                )
                 
-            # If it's a datetime object, format it
+            # If it's a datetime object, format it using our utility
             if isinstance(dt_value, datetime):
-                return dt_value.strftime('%Y-%m-%d %H:%M:%S')
+                return safe_strftime(
+                    dt_value, 
+                    '%Y-%m-%d %H:%M:%S',
+                    extra_info={"context": "backtest_engine_format_datetime"}
+                )
                 
-            # Try to convert other types to string
-            return str(dt_value)
+            # Try to convert other types to string with logging
+            result = str(dt_value)
+            return log_date_conversion(
+                dt_value,
+                result,
+                f"conversion of {type(dt_value).__name__} to string",
+                extra_info={"context": "backtest_engine_format_datetime"}
+            )
         except Exception as e:
             self.logger.warning(f"Error formatting datetime: {str(e)}")
-            return str(dt_value) if dt_value is not None else None
+            result = str(dt_value) if dt_value is not None else None
+            return log_date_conversion(
+                dt_value,
+                result,
+                "fallback string conversion after error",
+                extra_info={"error": str(e), "context": "backtest_engine_format_datetime"}
+            )
     
     def _create_bt_strategy_class(self, strategy_type, entry_conditions, exit_conditions, stop_loss=0, target_profit=0):
         """
@@ -364,10 +490,76 @@ class BacktestEngine:
             strategy_type (str): Strategy type (buy or sell)
             entry_conditions (list): List of entry conditions
             exit_conditions (list): List of exit conditions
+            stop_loss (float): Stop loss percentage
+            target_profit (float): Target profit percentage
             
         Returns:
             backtrader.Strategy: Backtrader strategy class
         """
+        # Store the strategy parameters for debug purposes
+        strategy_params = {
+            'strategy_type': strategy_type,
+            'entry_conditions': entry_conditions,
+            'exit_conditions': exit_conditions,
+            'stop_loss': stop_loss,
+            'target_profit': target_profit
+        }
+        
+        # Track how Backtrader interprets the strategy
+        self.backtrader_interpretation['strategy_params'] = strategy_params
+        
+        # Track how entry and exit conditions are interpreted
+        entry_interpretation = []
+        for condition in entry_conditions:
+            if 'indicator' in condition:
+                if 'variable' in condition:
+                    # This is an indicator initialization
+                    entry_interpretation.append({
+                        'type': 'indicator_setup',
+                        'indicator': condition.get('indicator'),
+                        'variable': condition.get('variable'),
+                        'params': condition.get('params', {})
+                    })
+            elif 'comparison' in condition or 'condition' in condition:
+                # This is a comparison condition
+                entry_interpretation.append({
+                    'type': 'comparison',
+                    'variable': condition.get('variable', ''),
+                    'comparison': condition.get('comparison', condition.get('condition', '')),
+                    'threshold': condition.get('threshold', 0),
+                    'action': condition.get('action', '')
+                })
+        
+        exit_interpretation = []
+        for condition in exit_conditions:
+            if 'indicator' in condition:
+                if 'variable' in condition:
+                    # This is an indicator initialization
+                    exit_interpretation.append({
+                        'type': 'indicator_setup',
+                        'indicator': condition.get('indicator'),
+                        'variable': condition.get('variable'),
+                        'params': condition.get('params', {})
+                    })
+            elif 'comparison' in condition or 'condition' in condition:
+                # This is a comparison condition
+                exit_interpretation.append({
+                    'type': 'comparison',
+                    'variable': condition.get('variable', ''),
+                    'comparison': condition.get('comparison', condition.get('condition', '')),
+                    'threshold': condition.get('threshold', 0),
+                    'action': condition.get('action', '')
+                })
+        
+        self.backtrader_interpretation['conditions'] = {
+            'entry_interpretation': entry_interpretation,
+            'exit_interpretation': exit_interpretation,
+            'backtrader_translation': {
+                'strategy_type': 'BUY' if strategy_type == 'buy' else 'SELL',
+                'stop_loss_handling': f"{stop_loss}% stop loss will trigger exit" if stop_loss > 0 else "No stop loss",
+                'take_profit_handling': f"{target_profit}% profit target will trigger exit" if target_profit > 0 else "No take profit"
+            }
+        }
         # Define a custom strategy class
         class CustomStrategy(bt.Strategy):
             def __init__(self):
@@ -382,6 +574,10 @@ class BacktestEngine:
                 
                 # Add position tracking to fix the 'barlen' issue
                 self.position_entry_bar = None  # Store the bar when a position is entered
+                
+                # Add condition tracking and position tracking storage
+                self.condition_evaluations = []
+                self.position_tracking = []
                 
                 # Parse entry conditions
                 self.entry_conditions = entry_conditions
@@ -456,6 +652,19 @@ class BacktestEngine:
                 self.log("Strategy ready")
                 
             
+            def _format_date(self, dt_value):
+                """Format a datetime value to string"""
+                if dt_value is None:
+                    return None
+                    
+                try:
+                    if isinstance(dt_value, datetime):
+                        return dt_value.strftime('%Y-%m-%d %H:%M:%S')
+                    return str(dt_value)
+                except Exception as e:
+                    self.log(f"Error formatting datetime: {str(e)}")
+                    return str(dt_value) if dt_value is not None else None
+            
             def log(self, txt, dt=None):
                 """Logging function"""
                 dt = dt or self.datas[0].datetime.date(0)
@@ -476,7 +685,7 @@ class BacktestEngine:
                         
                         # Create a new trade record
                         self.current_trade = {
-                            'entry_date': self.datas[0].datetime.datetime(0),
+                            'entry_date': self._format_date(self.datas[0].datetime.datetime(0)),
                             'entry_price': order.executed.price,
                             'exit_date': None,
                             'exit_price': None,
@@ -487,12 +696,25 @@ class BacktestEngine:
                         
                         # Store the current bar index for position tracking
                         self.position_entry_bar = len(self.datas[0])
+                        
+                        # Track position entry
+                        timestamp_raw = self.datas[0].datetime.datetime(0)
+                        timestamp_str = self._format_date(timestamp_raw)
+                        self.position_tracking.append({
+                            'action': 'ENTRY',
+                            'timestamp': timestamp_str,
+                            'price': order.executed.price,
+                            'size': order.executed.size,
+                            'bar_index': len(self.datas[0]),
+                            'reason': 'Entry conditions met',
+                            'portfolio_value': self.broker.getvalue()
+                        })
                     
                     elif order.issell():
                         self.log(f"SELL EXECUTED, Price: {order.executed.price:.2f}, Cost: {order.executed.value:.2f}, Comm: {order.executed.comm:.2f}")
                         
                         # Update the current trade record
-                        self.current_trade['exit_date'] = self.datas[0].datetime.datetime(0)
+                        self.current_trade['exit_date'] = self._format_date(self.datas[0].datetime.datetime(0))
                         self.current_trade['exit_price'] = order.executed.price
                         
                         # Calculate profit in points and percent
@@ -502,6 +724,38 @@ class BacktestEngine:
                         else:  # sell strategy
                             self.current_trade['profit_points'] = self.buyprice - order.executed.price
                             self.current_trade['profit_pct'] = (self.buyprice / order.executed.price - 1) * 100
+                        
+                        # Determine exit reason
+                        exit_reason = 'Exit conditions met'
+                        
+                        # Check if exit was due to stop loss or take profit
+                        if hasattr(self, 'buyprice') and self.buyprice:
+                            price = order.executed.price
+                            if strategy_type == 'buy':
+                                profit_pct = (price / self.buyprice - 1) * 100
+                                loss_pct = (1 - price / self.buyprice) * 100
+                            else:  # sell strategy
+                                profit_pct = (1 - price / self.buyprice) * 100
+                                loss_pct = (price / self.buyprice - 1) * 100
+                            
+                            if self.target_profit > 0 and profit_pct >= self.target_profit:
+                                exit_reason = f'Take profit triggered ({profit_pct:.2f}%)'
+                            elif self.stop_loss > 0 and loss_pct >= self.stop_loss:
+                                exit_reason = f'Stop loss triggered ({loss_pct:.2f}%)'
+                        
+                        # Track position exit
+                        timestamp_raw = self.datas[0].datetime.datetime(0)
+                        timestamp_str = self._format_date(timestamp_raw)
+                        self.position_tracking.append({
+                            'action': 'EXIT',
+                            'timestamp': timestamp_str,
+                            'price': order.executed.price,
+                            'size': order.executed.size,
+                            'bar_index': len(self.datas[0]),
+                            'reason': exit_reason,
+                            'portfolio_value': self.broker.getvalue(),
+                            'profit_pct': self.current_trade['profit_pct']
+                        })
                         
                         # Add the completed trade to the trades list
                         self.trades.append(self.current_trade)
@@ -631,6 +885,18 @@ class BacktestEngine:
                 if current_bar < 30:  # Arbitrary threshold to ensure indicators have enough data
                     return False
                 
+                # Add tracking for this evaluation
+                timestamp_raw = self.datas[0].datetime.datetime(0)
+                timestamp_str = self._format_date(timestamp_raw)
+                bar_tracking = {
+                    'timestamp': timestamp_str,
+                    'bar_number': current_bar,
+                    'conditions': []
+                }
+                
+                # Track if any condition evaluates to True
+                enter_trade = False
+                
                 # Parse and evaluate conditions
                 for condition in self.entry_conditions:
                     # Skip indicator definitions (these are just for adding indicators)
@@ -675,33 +941,67 @@ class BacktestEngine:
                                 self.log(f"Evaluating condition: {line_name} {comparison} {threshold} (current value: {var_value})")
                                 
                                 # Evaluate the condition
+                                condition_result = False
                                 if comparison == '>':
-                                    if var_value > threshold:
-                                        return True
+                                    condition_result = var_value > threshold
+                                    if condition_result:
+                                        enter_trade = True
                                 elif comparison == '>=':
-                                    if var_value >= threshold:
-                                        return True
+                                    condition_result = var_value >= threshold
+                                    if condition_result:
+                                        enter_trade = True
                                 elif comparison == '<':
-                                    if var_value < threshold:
-                                        return True
+                                    condition_result = var_value < threshold
+                                    if condition_result:
+                                        enter_trade = True
                                 elif comparison == '<=':
-                                    if var_value <= threshold:
-                                        return True
+                                    condition_result = var_value <= threshold
+                                    if condition_result:
+                                        enter_trade = True
                                 elif comparison == '==':
-                                    if var_value == threshold:
-                                        return True
+                                    condition_result = var_value == threshold
+                                    if condition_result:
+                                        enter_trade = True
                                 elif comparison == '!=':
-                                    if var_value != threshold:
-                                        return True
+                                    condition_result = var_value != threshold
+                                    if condition_result:
+                                        enter_trade = True
+                                
+                                # Track this condition evaluation
+                                try:
+                                    bar_tracking['conditions'].append({
+                                        'type': 'entry',
+                                        'variable': var_name,
+                                        'value': float(var_value) if not np.isnan(var_value) else None,
+                                        'comparison': comparison,
+                                        'threshold': threshold,
+                                        'result': condition_result
+                                    })
+                                except Exception as e:
+                                    self.log(f"Error tracking condition: {str(e)}")
                             else:
                                 # Log that we couldn't find the indicator line
                                 self.log(f"Warning: Indicator line '{var_name}' not found in data feed")
                                 # List available lines for debugging
                                 available_lines = dir(self.datas[0].lines)
                                 self.log(f"Available lines: {', '.join([l for l in available_lines if not l.startswith('_')])}")
+                                
+                                # Track the failed condition lookup
+                                bar_tracking['conditions'].append({
+                                    'type': 'entry',
+                                    'variable': var_name,
+                                    'value': None,
+                                    'comparison': condition.get('comparison', '>'),
+                                    'threshold': condition.get('threshold', 0),
+                                    'result': False,
+                                    'error': f"Variable not found in data feed"
+                                })
                 
-                # If no conditions triggered, return False
-                return False
+                # Add the entry evaluation to tracked history
+                self.condition_evaluations.append(bar_tracking)
+                
+                # Return the result
+                return enter_trade
             
             def _evaluate_exit_conditions(self):
                 """Evaluate exit conditions"""
@@ -714,6 +1014,19 @@ class BacktestEngine:
                     self.log(f"Position tracking: Current bar: {current_bar}, Entry bar: {self.position_entry_bar}, Bars in position: {bars_in_position}")
                 else:
                     self.log(f"Position tracking: Entry bar not set, using default 0 bars in position")
+                
+                # Add tracking for this evaluation
+                timestamp_raw = self.datas[0].datetime.datetime(0)
+                timestamp_str = self._format_date(timestamp_raw)
+                bar_tracking = {
+                    'timestamp': timestamp_str,
+                    'bar_number': current_bar,
+                    'conditions': []
+                }
+                
+                # Track if any condition evaluates to True
+                exit_trade = False
+                exit_reason = None
                 
                 # Parse and evaluate conditions
                 for condition in self.exit_conditions:
@@ -759,38 +1072,86 @@ class BacktestEngine:
                                 self.log(f"Evaluating exit condition: {line_name} {comparison} {threshold} (current value: {var_value})")
                                 
                                 # Evaluate the condition
+                                condition_result = False
                                 if comparison == '>':
-                                    if var_value > threshold:
-                                        return True
+                                    condition_result = var_value > threshold
+                                    if condition_result:
+                                        exit_trade = True
                                 elif comparison == '>=':
-                                    if var_value >= threshold:
-                                        return True
+                                    condition_result = var_value >= threshold
+                                    if condition_result:
+                                        exit_trade = True
                                 elif comparison == '<':
-                                    if var_value < threshold:
-                                        return True
+                                    condition_result = var_value < threshold
+                                    if condition_result:
+                                        exit_trade = True
                                 elif comparison == '<=':
-                                    if var_value <= threshold:
-                                        return True
+                                    condition_result = var_value <= threshold
+                                    if condition_result:
+                                        exit_trade = True
                                 elif comparison == '==':
-                                    if var_value == threshold:
-                                        return True
+                                    condition_result = var_value == threshold
+                                    if condition_result:
+                                        exit_trade = True
                                 elif comparison == '!=':
-                                    if var_value != threshold:
-                                        return True
+                                    condition_result = var_value != threshold
+                                    if condition_result:
+                                        exit_trade = True
+                                
+                                # Track this condition evaluation
+                                try:
+                                    bar_tracking['conditions'].append({
+                                        'type': 'exit',
+                                        'variable': var_name,
+                                        'value': float(var_value) if not np.isnan(var_value) else None,
+                                        'comparison': comparison,
+                                        'threshold': threshold,
+                                        'result': condition_result
+                                    })
+                                    
+                                    if condition_result:
+                                        exit_reason = f"Exit condition met: {var_name} {comparison} {threshold}"
+                                except Exception as e:
+                                    self.log(f"Error tracking condition: {str(e)}")
                             else:
                                 # Log that we couldn't find the indicator line
                                 self.log(f"Warning: Indicator line '{var_name}' not found in data feed")
                                 # List available lines for debugging
                                 available_lines = dir(self.datas[0].lines)
                                 self.log(f"Available lines: {', '.join([l for l in available_lines if not l.startswith('_')])}")
+                                
+                                # Track the failed condition lookup
+                                bar_tracking['conditions'].append({
+                                    'type': 'exit',
+                                    'variable': var_name,
+                                    'value': None,
+                                    'comparison': condition.get('comparison', '>'),
+                                    'threshold': condition.get('threshold', 0),
+                                    'result': False,
+                                    'error': f"Variable not found in data feed"
+                                })
                 
                 # If no conditions triggered, check if we've been in position too long
                 # as a failsafe - exit after 20 days in position if no other exit triggered
-                if bars_in_position > 20:
-                    self.log(f"Exit triggered by position duration: {bars_in_position} bars exceeds 20 bar limit")
-                    return True
+                if bars_in_position > 20 and not exit_trade:
+                    exit_trade = True
+                    exit_reason = f"Exit triggered by position duration: {bars_in_position} bars exceeds 20 bar limit"
+                    self.log(exit_reason)
                     
-                return False
+                    bar_tracking['conditions'].append({
+                        'type': 'exit',
+                        'variable': 'bars_in_position',
+                        'value': bars_in_position,
+                        'comparison': '>',
+                        'threshold': 20,
+                        'result': True
+                    })
+                
+                # Add the exit evaluation to tracked history
+                self.condition_evaluations.append(bar_tracking)
+                
+                # Return the result
+                return exit_trade
         
         return CustomStrategy
     
@@ -846,6 +1207,8 @@ class BacktestEngine:
         
         # Collect indicator columns (non-OHLC columns)
         indicator_columns = []
+        data_feed_indicators = {}
+        
         for column in data.columns:
             # Skip standard OHLCV columns 
             if column not in ['open', 'high', 'low', 'close', 'volume']:
@@ -859,6 +1222,19 @@ class BacktestEngine:
                 
                 self.logger.debug(f"Adding indicator column: {column} as {col_name}")
                 indicator_columns.append((col_name, column))
+                
+                # Track for debugging
+                data_feed_indicators[column] = {
+                    'backtrader_name': col_name,
+                    'sample_values': data[column].head(3).tolist() if not data.empty else []
+                }
+        
+        # Store data feed configuration for debugging
+        self.backtrader_interpretation['data_feed'] = {
+            'columns': list(data.columns),
+            'indicator_mappings': dict(indicator_columns),
+            'indicator_samples': data_feed_indicators
+        }
         
         self.logger.info(f"Identified {len(indicator_columns)} indicator columns to add to data feed")
         if indicator_columns:

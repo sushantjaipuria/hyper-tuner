@@ -1,4 +1,3 @@
-
 import uuid
 import logging
 import json
@@ -10,13 +9,14 @@ from skopt.utils import use_named_args
 import threading
 import time
 from copy import deepcopy
+from logging_config import get_logger
 
 class Optimizer:
     """Class to handle optimization of trading strategies"""
     
     def __init__(self, backtest_engine):
         """Initialize the Optimizer"""
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__)
         self.backtest_engine = backtest_engine
         self.optimizations = {}
     
