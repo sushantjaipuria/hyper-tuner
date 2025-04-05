@@ -1,0 +1,380 @@
+2025-04-05 07:51:02,245 - hyper-tuner - INFO - Logging configured with filtered console output and full file logging to /workspace/backend/debug/app.log
+2025-04-05 07:51:02,245 - hyper-tuner - INFO - DATE_CONVERSION logs will only appear in the log file, not in console output
+2025-04-05 07:51:04,443 - hyper-tuner - INFO - Logging configured with filtered console output and full file logging to /workspace/backend/debug/app.log
+2025-04-05 07:51:04,443 - hyper-tuner - INFO - DATE_CONVERSION logs will only appear in the log file, not in console output
+2025-04-05 07:51:04,445 - hyper-tuner - INFO - Logging configured with filtered console output and full file logging to /workspace/backend/debug/app.log
+2025-04-05 07:51:04,445 - hyper-tuner - INFO - DATE_CONVERSION logs will only appear in the log file, not in console output
+2025-04-05 07:51:04,445 - data_provider_factory - INFO - get_provider called with force_provider: 'None', user_id: 'None' (type: NoneType)
+2025-04-05 07:51:04,445 - data_provider_factory - INFO - Using Yahoo Finance as default data provider
+2025-04-05 07:51:05,678 - hyper-tuner - INFO - Using data provider: yahoo
+2025-04-05 07:51:05,678 - backtest_engine - INFO - BacktestEngine initialized
+2025-04-05 07:51:05,682 - hyper-tuner - INFO - Logging configured with filtered console output and full file logging to /workspace/backend/debug/app.log
+2025-04-05 07:51:05,682 - hyper-tuner - INFO - DATE_CONVERSION logs will only appear in the log file, not in console output
+2025-04-05 07:51:05,692 - hyper-tuner - INFO - Starting Flask server on port 3001
+2025-04-05 07:51:06,688 - hyper-tuner - INFO - Logging configured with filtered console output and full file logging to /workspace/backend/debug/app.log
+2025-04-05 07:51:06,688 - hyper-tuner - INFO - DATE_CONVERSION logs will only appear in the log file, not in console output
+2025-04-05 07:51:07,645 - hyper-tuner - INFO - Logging configured with filtered console output and full file logging to /workspace/backend/debug/app.log
+2025-04-05 07:51:07,645 - hyper-tuner - INFO - DATE_CONVERSION logs will only appear in the log file, not in console output
+2025-04-05 07:51:07,647 - hyper-tuner - INFO - Logging configured with filtered console output and full file logging to /workspace/backend/debug/app.log
+2025-04-05 07:51:07,647 - hyper-tuner - INFO - DATE_CONVERSION logs will only appear in the log file, not in console output
+2025-04-05 07:51:07,647 - data_provider_factory - INFO - get_provider called with force_provider: 'None', user_id: 'None' (type: NoneType)
+2025-04-05 07:51:07,647 - data_provider_factory - INFO - Using Yahoo Finance as default data provider
+2025-04-05 07:51:07,994 - hyper-tuner - INFO - Using data provider: yahoo
+2025-04-05 07:51:07,994 - backtest_engine - INFO - BacktestEngine initialized
+2025-04-05 07:51:07,998 - hyper-tuner - INFO - Logging configured with filtered console output and full file logging to /workspace/backend/debug/app.log
+2025-04-05 07:51:07,998 - hyper-tuner - INFO - DATE_CONVERSION logs will only appear in the log file, not in console output
+2025-04-05 07:51:08,009 - hyper-tuner - INFO - Starting Flask server on port 3001
+2025-04-05 07:51:44,312 - kite_integration - INFO - Verifying Kite API token validity for user 'satyam'
+2025-04-05 07:51:44,351 - data_provider_factory - INFO - Returning provider info: {'name': 'yahoo'}
+2025-04-05 07:51:44,448 - kite_integration - ERROR - Token verification failed for user 'satyam': Invalid `api_key` or `access_token`.
+2025-04-05 07:51:44,449 - kite_integration - INFO - Verifying Kite API token validity for user 'sushant'
+2025-04-05 07:51:44,503 - kite_integration - ERROR - Token verification failed for user 'sushant': Invalid `api_key` or `access_token`.
+2025-04-05 07:51:44,701 - data_provider_factory - INFO - Returning provider info: {'name': 'yahoo'}
+2025-04-05 07:51:44,702 - hyper-tuner - INFO - Sending provider info to frontend - Provider: yahoo, User: None, Display: yahoo
+2025-04-05 07:51:44,729 - hyper-tuner - INFO - Fetching available indicators
+2025-04-05 07:51:44,731 - hyper-tuner - INFO - Successfully retrieved 158 indicators
+2025-04-05 07:51:44,744 - data_provider_factory - INFO - Returning provider info: {'name': 'yahoo'}
+2025-04-05 07:51:44,852 - hyper-tuner - INFO - Fetching available indicators
+2025-04-05 07:51:44,854 - hyper-tuner - INFO - Successfully retrieved 158 indicators
+2025-04-05 07:51:44,995 - kite_integration - INFO - Verifying Kite API token validity for user 'satyam'
+2025-04-05 07:51:45,042 - kite_integration - ERROR - Token verification failed for user 'satyam': Invalid `api_key` or `access_token`.
+2025-04-05 07:51:45,043 - kite_integration - INFO - Verifying Kite API token validity for user 'sushant'
+2025-04-05 07:51:45,086 - kite_integration - ERROR - Token verification failed for user 'sushant': Invalid `api_key` or `access_token`.
+2025-04-05 07:51:45,150 - data_provider_factory - INFO - Returning provider info: {'name': 'yahoo'}
+2025-04-05 07:51:45,151 - hyper-tuner - INFO - Sending provider info to frontend - Provider: yahoo, User: None, Display: yahoo
+2025-04-05 07:51:48,212 - hyper-tuner - INFO - Setting data provider - Provider: kite, User: sushant (type: str)
+2025-04-05 07:51:48,212 - hyper-tuner - INFO - Full request data: {'provider': 'kite', 'user_id': 'sushant'}
+2025-04-05 07:51:48,212 - hyper-tuner - INFO - Request headers: {'Accept': 'application/json, text/plain, */*', 'Host': 'localhost:3001', 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36', 'Accept-Encoding': 'gzip, deflate, br, zstd', 'Accept-Language': 'en-GB,en-US;q=0.9,en;q=0.8', 'Origin': 'https://jubilant-space-computing-machine-pj4vx4wwgpqcvj5-3000.app.github.dev', 'X-Request-Id': 'bb123845a2cb7235e9ab939445ee7e78', 'X-Real-Ip': '171.76.80.28', 'X-Forwarded-Port': '443', 'X-Forwarded-Scheme': 'https', 'X-Original-Uri': '/api/set-data-provider', 'X-Scheme': 'https', 'Sec-Ch-Ua-Platform': '"macOS"', 'Sec-Ch-Ua': '"Google Chrome";v="135", "Not-A.Brand";v="8", "Chromium";v="135"', 'Sec-Ch-Ua-Mobile': '?0', 'Sec-Fetch-Site': 'same-site', 'Sec-Fetch-Mode': 'cors', 'Sec-Fetch-Dest': 'empty', 'Priority': 'u=1, i', 'X-Original-Proto': 'https', 'X-Forwarded-Proto': 'https', 'X-Forwarded-Host': 'jubilant-space-computing-machine-pj4vx4wwgpqcvj5-3001.app.github.dev', 'X-Forwarded-For': '171.76.80.28', 'Proxy-Connection': 'Keep-Alive', 'Content-Type': 'application/json', 'Content-Length': '39'}
+2025-04-05 07:51:48,212 - data_provider_factory - INFO - get_provider called with force_provider: 'kite', user_id: 'sushant' (type: str)
+2025-04-05 07:51:48,212 - data_provider_factory - INFO - Forcing data provider: kite for user 'sushant'
+2025-04-05 07:51:48,212 - data_provider_factory - INFO - Creating Kite provider with user_id: 'sushant' (type: str)
+2025-04-05 07:51:48,212 - data_provider_factory - INFO - Original user_id: 'sushant' (type: str), _provider_user: 'None', DEFAULT: 'satyam'
+2025-04-05 07:51:48,214 - data_provider_factory - INFO - Using Zerodha Kite data provider for user 'sushant' (forced)
+2025-04-05 07:51:48,214 - hyper-tuner - INFO - Checking if Kite authentication is required for user: sushant
+2025-04-05 07:51:48,214 - hyper-tuner - INFO - Current user type: str
+2025-04-05 07:51:48,214 - kite_integration - INFO - Verifying Kite API token validity for user 'sushant'
+2025-04-05 07:51:48,258 - kite_integration - ERROR - Token verification failed for user 'sushant': Invalid `api_key` or `access_token`.
+2025-04-05 07:51:48,258 - hyper-tuner - INFO - Kite token valid: False, requires auth: True (type: bool)
+2025-04-05 07:51:48,259 - data_provider_factory - INFO - Adding user_id to provider info: 'sushant' (type: str)
+2025-04-05 07:51:48,259 - data_provider_factory - INFO - Current provider info - Name: kite, User: sushant
+2025-04-05 07:51:48,261 - data_provider_factory - INFO - Returning provider info: {'name': 'kite', 'user_id': 'sushant', 'display_name': 'Kite-Sushant'}
+2025-04-05 07:51:48,261 - hyper-tuner - INFO - Responding to set-data-provider with: {'success': True, 'provider': 'kite', 'display_name': 'Kite-Sushant', 'user_id': 'sushant', 'requires_auth': True}
+2025-04-05 07:51:49,662 - hyper-tuner - INFO - get_kite_login_url called with user_id: 'sushant' (type: str)
+2025-04-05 07:51:49,662 - hyper-tuner - INFO - Request args: {'user_id': 'sushant'}
+2025-04-05 07:51:49,662 - hyper-tuner - INFO - Request headers: {'Accept': 'application/json, text/plain, */*', 'Host': 'localhost:3001', 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36', 'Accept-Encoding': 'gzip, deflate, br, zstd', 'Accept-Language': 'en-GB,en-US;q=0.9,en;q=0.8', 'Origin': 'https://jubilant-space-computing-machine-pj4vx4wwgpqcvj5-3000.app.github.dev', 'X-Request-Id': '15d5715a65b9cfed3697129a69784111', 'X-Real-Ip': '171.76.80.28', 'X-Forwarded-Port': '443', 'X-Forwarded-Scheme': 'https', 'X-Original-Uri': '/api/kite/login-url?user_id=sushant', 'X-Scheme': 'https', 'Sec-Ch-Ua-Platform': '"macOS"', 'Sec-Ch-Ua': '"Google Chrome";v="135", "Not-A.Brand";v="8", "Chromium";v="135"', 'Sec-Ch-Ua-Mobile': '?0', 'Sec-Fetch-Site': 'same-site', 'Sec-Fetch-Mode': 'cors', 'Sec-Fetch-Dest': 'empty', 'Priority': 'u=1, i', 'X-Original-Proto': 'https', 'X-Forwarded-Proto': 'https', 'X-Forwarded-Host': 'jubilant-space-computing-machine-pj4vx4wwgpqcvj5-3001.app.github.dev', 'X-Forwarded-For': '171.76.80.28', 'Proxy-Connection': 'Keep-Alive'}
+2025-04-05 07:51:49,662 - data_provider_factory - INFO - get_provider called with force_provider: 'kite', user_id: 'sushant' (type: str)
+2025-04-05 07:51:49,663 - data_provider_factory - INFO - Forcing data provider: kite for user 'sushant'
+2025-04-05 07:51:49,663 - data_provider_factory - INFO - Creating Kite provider with user_id: 'sushant' (type: str)
+2025-04-05 07:51:49,663 - data_provider_factory - INFO - Original user_id: 'sushant' (type: str), _provider_user: 'sushant', DEFAULT: 'satyam'
+2025-04-05 07:51:49,663 - data_provider_factory - INFO - Using Zerodha Kite data provider for user 'sushant' (forced)
+2025-04-05 07:51:49,663 - hyper-tuner - INFO - Generated Kite login URL for user 'sushant': https://kite.zerodha.com/connect/login?api_key=wiivz6gsrdyiet12&v=3&kite_user_id=sushant
+2025-04-05 07:52:12,673 - hyper-tuner - INFO - get_kite_login_url called with user_id: 'sushant' (type: str)
+2025-04-05 07:52:12,673 - hyper-tuner - INFO - Request args: {'user_id': 'sushant'}
+2025-04-05 07:52:12,673 - hyper-tuner - INFO - Request headers: {'Accept': 'application/json, text/plain, */*', 'Host': 'localhost:3001', 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36', 'Accept-Encoding': 'gzip, deflate, br, zstd', 'Accept-Language': 'en-GB,en-US;q=0.9,en;q=0.8', 'Origin': 'https://jubilant-space-computing-machine-pj4vx4wwgpqcvj5-3000.app.github.dev', 'X-Request-Id': 'ec38b10761263b563573693b133a1540', 'X-Real-Ip': '171.76.80.28', 'X-Forwarded-Port': '443', 'X-Forwarded-Scheme': 'https', 'X-Original-Uri': '/api/kite/login-url?user_id=sushant', 'X-Scheme': 'https', 'Sec-Ch-Ua-Platform': '"macOS"', 'Sec-Ch-Ua': '"Google Chrome";v="135", "Not-A.Brand";v="8", "Chromium";v="135"', 'Sec-Ch-Ua-Mobile': '?0', 'Sec-Fetch-Site': 'same-site', 'Sec-Fetch-Mode': 'cors', 'Sec-Fetch-Dest': 'empty', 'Priority': 'u=1, i', 'X-Original-Proto': 'https', 'X-Forwarded-Proto': 'https', 'X-Forwarded-Host': 'jubilant-space-computing-machine-pj4vx4wwgpqcvj5-3001.app.github.dev', 'X-Forwarded-For': '171.76.80.28', 'Proxy-Connection': 'Keep-Alive'}
+2025-04-05 07:52:12,673 - data_provider_factory - INFO - get_provider called with force_provider: 'kite', user_id: 'sushant' (type: str)
+2025-04-05 07:52:12,673 - data_provider_factory - INFO - Forcing data provider: kite for user 'sushant'
+2025-04-05 07:52:12,674 - data_provider_factory - INFO - Creating Kite provider with user_id: 'sushant' (type: str)
+2025-04-05 07:52:12,674 - data_provider_factory - INFO - Original user_id: 'sushant' (type: str), _provider_user: 'sushant', DEFAULT: 'satyam'
+2025-04-05 07:52:12,674 - data_provider_factory - INFO - Using Zerodha Kite data provider for user 'sushant' (forced)
+2025-04-05 07:52:12,674 - hyper-tuner - INFO - Generated Kite login URL for user 'sushant': https://kite.zerodha.com/connect/login?api_key=wiivz6gsrdyiet12&v=3&kite_user_id=sushant
+2025-04-05 07:52:15,953 - hyper-tuner - INFO - Setting data provider - Provider: yahoo, User: None (type: NoneType)
+2025-04-05 07:52:15,953 - hyper-tuner - INFO - Full request data: {'provider': 'yahoo'}
+2025-04-05 07:52:15,954 - hyper-tuner - INFO - Request headers: {'Accept': 'application/json, text/plain, */*', 'Host': 'localhost:3001', 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36', 'Accept-Encoding': 'gzip, deflate, br, zstd', 'Accept-Language': 'en-GB,en-US;q=0.9,en;q=0.8', 'Origin': 'https://jubilant-space-computing-machine-pj4vx4wwgpqcvj5-3000.app.github.dev', 'X-Request-Id': '4fd85810f017c4a92400117e3e729a27', 'X-Real-Ip': '171.76.80.28', 'X-Forwarded-Port': '443', 'X-Forwarded-Scheme': 'https', 'X-Original-Uri': '/api/set-data-provider', 'X-Scheme': 'https', 'Sec-Ch-Ua-Platform': '"macOS"', 'Sec-Ch-Ua': '"Google Chrome";v="135", "Not-A.Brand";v="8", "Chromium";v="135"', 'Sec-Ch-Ua-Mobile': '?0', 'Sec-Fetch-Site': 'same-site', 'Sec-Fetch-Mode': 'cors', 'Sec-Fetch-Dest': 'empty', 'Priority': 'u=1, i', 'X-Original-Proto': 'https', 'X-Forwarded-Proto': 'https', 'X-Forwarded-Host': 'jubilant-space-computing-machine-pj4vx4wwgpqcvj5-3001.app.github.dev', 'X-Forwarded-For': '171.76.80.28', 'Proxy-Connection': 'Keep-Alive', 'Content-Type': 'application/json', 'Content-Length': '20'}
+2025-04-05 07:52:15,954 - data_provider_factory - INFO - get_provider called with force_provider: 'yahoo', user_id: 'None' (type: NoneType)
+2025-04-05 07:52:15,954 - data_provider_factory - INFO - Forcing data provider: yahoo
+2025-04-05 07:52:16,114 - data_provider_factory - INFO - Using Yahoo Finance data provider (forced)
+2025-04-05 07:52:16,114 - data_provider_factory - INFO - Returning provider info: {'name': 'yahoo'}
+2025-04-05 07:52:16,114 - hyper-tuner - INFO - Responding to set-data-provider with: {'success': True, 'provider': 'yahoo', 'display_name': 'yahoo', 'user_id': None, 'requires_auth': False}
+2025-04-05 07:52:16,761 - hyper-tuner - INFO - verify_kite_token called with user_id: 'sushant' (type: str)
+2025-04-05 07:52:16,761 - hyper-tuner - INFO - Full request args: {'user_id': 'sushant'}
+2025-04-05 07:52:16,761 - hyper-tuner - INFO - Referrer: None
+2025-04-05 07:52:16,761 - data_provider_factory - INFO - get_provider called with force_provider: 'kite', user_id: 'sushant' (type: str)
+2025-04-05 07:52:16,761 - data_provider_factory - INFO - Forcing data provider: kite for user 'sushant'
+2025-04-05 07:52:16,761 - data_provider_factory - INFO - Creating Kite provider with user_id: 'sushant' (type: str)
+2025-04-05 07:52:16,762 - data_provider_factory - INFO - Original user_id: 'sushant' (type: str), _provider_user: 'None', DEFAULT: 'satyam'
+2025-04-05 07:52:16,762 - data_provider_factory - INFO - Using Zerodha Kite data provider for user 'sushant' (forced)
+2025-04-05 07:52:16,762 - kite_integration - INFO - Verifying Kite API token validity for user 'sushant'
+2025-04-05 07:52:16,805 - kite_integration - ERROR - Token verification failed for user 'sushant': Invalid `api_key` or `access_token`.
+2025-04-05 07:52:16,805 - hyper-tuner - INFO - Kite token validation result for user 'sushant': False
+2025-04-05 07:52:44,431 - hyper-tuner - INFO - Setting data provider - Provider: kite, User: sushant (type: str)
+2025-04-05 07:52:44,431 - hyper-tuner - INFO - Full request data: {'provider': 'kite', 'user_id': 'sushant'}
+2025-04-05 07:52:44,431 - hyper-tuner - INFO - Request headers: {'Accept': 'application/json, text/plain, */*', 'Host': 'localhost:3001', 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36', 'Accept-Encoding': 'gzip, deflate, br, zstd', 'Accept-Language': 'en-GB,en-US;q=0.9,en;q=0.8', 'Origin': 'https://jubilant-space-computing-machine-pj4vx4wwgpqcvj5-3000.app.github.dev', 'X-Request-Id': '766d8a8ba115571ddf17f01ee9ad396b', 'X-Real-Ip': '171.76.80.28', 'X-Forwarded-Port': '443', 'X-Forwarded-Scheme': 'https', 'X-Original-Uri': '/api/set-data-provider', 'X-Scheme': 'https', 'Sec-Ch-Ua-Platform': '"macOS"', 'Sec-Ch-Ua': '"Google Chrome";v="135", "Not-A.Brand";v="8", "Chromium";v="135"', 'Sec-Ch-Ua-Mobile': '?0', 'Sec-Fetch-Site': 'same-site', 'Sec-Fetch-Mode': 'cors', 'Sec-Fetch-Dest': 'empty', 'Priority': 'u=1, i', 'X-Original-Proto': 'https', 'X-Forwarded-Proto': 'https', 'X-Forwarded-Host': 'jubilant-space-computing-machine-pj4vx4wwgpqcvj5-3001.app.github.dev', 'X-Forwarded-For': '171.76.80.28', 'Proxy-Connection': 'Keep-Alive', 'Content-Type': 'application/json', 'Content-Length': '39'}
+2025-04-05 07:52:44,431 - data_provider_factory - INFO - get_provider called with force_provider: 'kite', user_id: 'sushant' (type: str)
+2025-04-05 07:52:44,431 - data_provider_factory - INFO - Forcing data provider: kite for user 'sushant'
+2025-04-05 07:52:44,432 - data_provider_factory - INFO - Creating Kite provider with user_id: 'sushant' (type: str)
+2025-04-05 07:52:44,432 - data_provider_factory - INFO - Original user_id: 'sushant' (type: str), _provider_user: 'sushant', DEFAULT: 'satyam'
+2025-04-05 07:52:44,432 - data_provider_factory - INFO - Using Zerodha Kite data provider for user 'sushant' (forced)
+2025-04-05 07:52:44,432 - hyper-tuner - INFO - Checking if Kite authentication is required for user: sushant
+2025-04-05 07:52:44,432 - hyper-tuner - INFO - Current user type: str
+2025-04-05 07:52:44,432 - kite_integration - INFO - Verifying Kite API token validity for user 'sushant'
+2025-04-05 07:52:44,467 - kite_integration - ERROR - Token verification failed for user 'sushant': Invalid `api_key` or `access_token`.
+2025-04-05 07:52:44,468 - hyper-tuner - INFO - Kite token valid: False, requires auth: True (type: bool)
+2025-04-05 07:52:44,468 - data_provider_factory - INFO - Adding user_id to provider info: 'sushant' (type: str)
+2025-04-05 07:52:44,468 - data_provider_factory - INFO - Current provider info - Name: kite, User: sushant
+2025-04-05 07:52:44,468 - data_provider_factory - INFO - Returning provider info: {'name': 'kite', 'user_id': 'sushant', 'display_name': 'Kite-Sushant'}
+2025-04-05 07:52:44,468 - hyper-tuner - INFO - Responding to set-data-provider with: {'success': True, 'provider': 'kite', 'display_name': 'Kite-Sushant', 'user_id': 'sushant', 'requires_auth': True}
+2025-04-05 07:52:45,586 - hyper-tuner - INFO - get_kite_login_url called with user_id: 'sushant' (type: str)
+2025-04-05 07:52:45,586 - hyper-tuner - INFO - Request args: {'user_id': 'sushant'}
+2025-04-05 07:52:45,586 - hyper-tuner - INFO - Request headers: {'Accept': 'application/json, text/plain, */*', 'Host': 'localhost:3001', 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36', 'Accept-Encoding': 'gzip, deflate, br, zstd', 'Accept-Language': 'en-GB,en-US;q=0.9,en;q=0.8', 'Origin': 'https://jubilant-space-computing-machine-pj4vx4wwgpqcvj5-3000.app.github.dev', 'X-Request-Id': '6243fa66598000ce54c756f22da36f3b', 'X-Real-Ip': '171.76.80.28', 'X-Forwarded-Port': '443', 'X-Forwarded-Scheme': 'https', 'X-Original-Uri': '/api/kite/login-url?user_id=sushant', 'X-Scheme': 'https', 'Sec-Ch-Ua-Platform': '"macOS"', 'Sec-Ch-Ua': '"Google Chrome";v="135", "Not-A.Brand";v="8", "Chromium";v="135"', 'Sec-Ch-Ua-Mobile': '?0', 'Sec-Fetch-Site': 'same-site', 'Sec-Fetch-Mode': 'cors', 'Sec-Fetch-Dest': 'empty', 'Priority': 'u=1, i', 'X-Original-Proto': 'https', 'X-Forwarded-Proto': 'https', 'X-Forwarded-Host': 'jubilant-space-computing-machine-pj4vx4wwgpqcvj5-3001.app.github.dev', 'X-Forwarded-For': '171.76.80.28', 'Proxy-Connection': 'Keep-Alive'}
+2025-04-05 07:52:45,586 - data_provider_factory - INFO - get_provider called with force_provider: 'kite', user_id: 'sushant' (type: str)
+2025-04-05 07:52:45,586 - data_provider_factory - INFO - Forcing data provider: kite for user 'sushant'
+2025-04-05 07:52:45,587 - data_provider_factory - INFO - Creating Kite provider with user_id: 'sushant' (type: str)
+2025-04-05 07:52:45,587 - data_provider_factory - INFO - Original user_id: 'sushant' (type: str), _provider_user: 'sushant', DEFAULT: 'satyam'
+2025-04-05 07:52:45,587 - data_provider_factory - INFO - Using Zerodha Kite data provider for user 'sushant' (forced)
+2025-04-05 07:52:45,587 - hyper-tuner - INFO - Generated Kite login URL for user 'sushant': https://kite.zerodha.com/connect/login?api_key=wiivz6gsrdyiet12&v=3&kite_user_id=sushant
+2025-04-05 07:52:57,044 - hyper-tuner - INFO - No user_id in callback, using tracked user: sushant
+2025-04-05 07:52:57,045 - hyper-tuner - INFO - Received request token for user 'sushant': ofZu9...
+2025-04-05 07:52:57,045 - data_provider_factory - INFO - get_provider called with force_provider: 'kite', user_id: 'sushant' (type: str)
+2025-04-05 07:52:57,045 - data_provider_factory - INFO - Forcing data provider: kite for user 'sushant'
+2025-04-05 07:52:57,045 - data_provider_factory - INFO - Creating Kite provider with user_id: 'sushant' (type: str)
+2025-04-05 07:52:57,045 - data_provider_factory - INFO - Original user_id: 'sushant' (type: str), _provider_user: 'sushant', DEFAULT: 'satyam'
+2025-04-05 07:52:57,045 - data_provider_factory - INFO - Using Zerodha Kite data provider for user 'sushant' (forced)
+2025-04-05 07:52:57,045 - kite_integration - INFO - Authenticating user 'sushant' with request token: ofZu9...
+2025-04-05 07:52:57,081 - kite_integration - INFO - Saving new access token for user 'sushant' to configuration
+2025-04-05 07:52:57,081 - hyper-tuner - INFO - Kite authentication successful for user 'sushant'
+2025-04-05 07:52:57,155 - hyper-tuner - INFO - verify_kite_token called with user_id: 'sushant' (type: str)
+2025-04-05 07:52:57,155 - hyper-tuner - INFO - Full request args: {'user_id': 'sushant'}
+2025-04-05 07:52:57,155 - hyper-tuner - INFO - Referrer: None
+2025-04-05 07:52:57,156 - data_provider_factory - INFO - get_provider called with force_provider: 'kite', user_id: 'sushant' (type: str)
+2025-04-05 07:52:57,156 - data_provider_factory - INFO - Forcing data provider: kite for user 'sushant'
+2025-04-05 07:52:57,156 - data_provider_factory - INFO - Creating Kite provider with user_id: 'sushant' (type: str)
+2025-04-05 07:52:57,156 - data_provider_factory - INFO - Original user_id: 'sushant' (type: str), _provider_user: 'sushant', DEFAULT: 'satyam'
+2025-04-05 07:52:57,157 - kite_integration - INFO - Setting access token from configuration for user 'sushant'
+2025-04-05 07:52:57,157 - data_provider_factory - INFO - Using Zerodha Kite data provider for user 'sushant' (forced)
+2025-04-05 07:52:57,157 - kite_integration - INFO - Verifying Kite API token validity for user 'sushant'
+2025-04-05 07:52:57,194 - kite_integration - INFO - Token verified successfully for user 'sushant'. Kite username: Sushant Jaipuria
+2025-04-05 07:52:57,194 - hyper-tuner - INFO - Kite token validation result for user 'sushant': True
+2025-04-05 07:52:57,657 - hyper-tuner - INFO - verify_kite_token called with user_id: 'sushant' (type: str)
+2025-04-05 07:52:57,657 - hyper-tuner - INFO - Full request args: {'user_id': 'sushant'}
+2025-04-05 07:52:57,657 - hyper-tuner - INFO - Referrer: None
+2025-04-05 07:52:57,657 - data_provider_factory - INFO - get_provider called with force_provider: 'kite', user_id: 'sushant' (type: str)
+2025-04-05 07:52:57,657 - data_provider_factory - INFO - Forcing data provider: kite for user 'sushant'
+2025-04-05 07:52:57,657 - data_provider_factory - INFO - Creating Kite provider with user_id: 'sushant' (type: str)
+2025-04-05 07:52:57,658 - data_provider_factory - INFO - Original user_id: 'sushant' (type: str), _provider_user: 'sushant', DEFAULT: 'satyam'
+2025-04-05 07:52:57,658 - kite_integration - INFO - Setting access token from configuration for user 'sushant'
+2025-04-05 07:52:57,658 - data_provider_factory - INFO - Using Zerodha Kite data provider for user 'sushant' (forced)
+2025-04-05 07:52:57,658 - kite_integration - INFO - Verifying Kite API token validity for user 'sushant'
+2025-04-05 07:52:57,694 - kite_integration - INFO - Token verified successfully for user 'sushant'. Kite username: Sushant Jaipuria
+2025-04-05 07:52:57,695 - hyper-tuner - INFO - Kite token validation result for user 'sushant': True
+2025-04-05 07:52:58,545 - hyper-tuner - INFO - verify_kite_token called with user_id: 'sushant' (type: str)
+2025-04-05 07:52:58,545 - hyper-tuner - INFO - Full request args: {'user_id': 'sushant'}
+2025-04-05 07:52:58,545 - hyper-tuner - INFO - Referrer: None
+2025-04-05 07:52:58,545 - data_provider_factory - INFO - get_provider called with force_provider: 'kite', user_id: 'sushant' (type: str)
+2025-04-05 07:52:58,545 - data_provider_factory - INFO - Forcing data provider: kite for user 'sushant'
+2025-04-05 07:52:58,545 - data_provider_factory - INFO - Creating Kite provider with user_id: 'sushant' (type: str)
+2025-04-05 07:52:58,545 - data_provider_factory - INFO - Original user_id: 'sushant' (type: str), _provider_user: 'sushant', DEFAULT: 'satyam'
+2025-04-05 07:52:58,545 - kite_integration - INFO - Setting access token from configuration for user 'sushant'
+2025-04-05 07:52:58,546 - data_provider_factory - INFO - Using Zerodha Kite data provider for user 'sushant' (forced)
+2025-04-05 07:52:58,546 - kite_integration - INFO - Verifying Kite API token validity for user 'sushant'
+2025-04-05 07:52:58,579 - kite_integration - INFO - Token verified successfully for user 'sushant'. Kite username: Sushant Jaipuria
+2025-04-05 07:52:58,579 - hyper-tuner - INFO - Kite token validation result for user 'sushant': True
+2025-04-05 07:53:40,345 - hyper-tuner - INFO - DATE_DEBUG - Detected request from 'Run Backtest & Continue' button
+2025-04-05 07:53:40,345 - hyper-tuner - INFO - DATE_DEBUG - RECEIVED FROM FRONTEND: Raw start_date='2025-01-01', end_date='2025-03-31'
+2025-04-05 07:53:40,345 - hyper-tuner - INFO - DATE_DEBUG - TYPES: start_date type=str, end_date type=str
+2025-04-05 07:53:40,345 - hyper-tuner - INFO - DATE_DEBUG - REQUEST HEADERS: {'Accept': 'application/json, text/plain, */*', 'Host': 'localhost:3001', 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36', 'Accept-Encoding': 'gzip, deflate, br, zstd', 'Accept-Language': 'en-GB,en-US;q=0.9,en;q=0.8', 'Origin': 'https://jubilant-space-computing-machine-pj4vx4wwgpqcvj5-3000.app.github.dev', 'X-Request-Id': '43e7a4079d923a124255dd76f097075c', 'X-Real-Ip': '171.76.80.28', 'X-Forwarded-Port': '443', 'X-Forwarded-Scheme': 'https', 'X-Original-Uri': '/api/run-backtest', 'X-Scheme': 'https', 'Sec-Ch-Ua-Platform': '"macOS"', 'Sec-Ch-Ua': '"Google Chrome";v="135", "Not-A.Brand";v="8", "Chromium";v="135"', 'Sec-Ch-Ua-Mobile': '?0', 'Sec-Fetch-Site': 'same-site', 'Sec-Fetch-Mode': 'cors', 'Sec-Fetch-Dest': 'empty', 'Priority': 'u=1, i', 'X-Original-Proto': 'https', 'X-Forwarded-Proto': 'https', 'X-Forwarded-Host': 'jubilant-space-computing-machine-pj4vx4wwgpqcvj5-3001.app.github.dev', 'X-Forwarded-For': '171.76.80.28', 'Proxy-Connection': 'Keep-Alive', 'Content-Type': 'application/json', 'Content-Length': '158'}
+2025-04-05 07:53:40,345 - hyper-tuner - INFO - DATE_DEBUG - REQUEST DATA: {'strategy_id': '2c2564b9-11bf-4ba8-8fe4-10367acc5a4d', 'initial_capital': 1500000, 'start_date': '2025-01-01', 'end_date': '2025-03-31', '_debug_date_tracking': True}
+2025-04-05 07:53:40,345 - hyper-tuner - INFO - DATE_DEBUG - SERVER TIMEZONE: UTC
+2025-04-05 07:53:40,345 - hyper-tuner - INFO - API REQUEST PARAMETERS: Received backtest request with start_date=2025-01-01, end_date=2025-03-31
+2025-04-05 07:53:40,346 - hyper-tuner - INFO - API INITIAL CAPITAL: Received request with initial_capital=1500000 (type: int)
+2025-04-05 07:53:40,346 - hyper-tuner - INFO - DATE_DEBUG - Request debug file saved to /workspace/backend/debug/backtest_request_debug_20250405_075340.json
+2025-04-05 07:53:40,493 - utils - INFO - DATE_CONVERSION - strptime with format '%Y-%m-%d' at utils.py:68 in safe_strptime:
+  Input: 2025-01-01 (type: str)
+  Output: 2025-01-01 00:00:00 (type: datetime)
+  Context: {'source': 'frontend', 'context': 'backtest_start_date_validation'}
+  Output timezone info: None
+2025-04-05 07:53:40,494 - utils - INFO - DATE_CONVERSION - strptime with format '%Y-%m-%d' at utils.py:68 in safe_strptime:
+  Input: 2025-03-31 (type: str)
+  Output: 2025-03-31 00:00:00 (type: datetime)
+  Context: {'source': 'frontend', 'context': 'backtest_end_date_validation'}
+  Output timezone info: None
+2025-04-05 07:53:40,494 - hyper-tuner - INFO - Running backtest for strategy 2c2564b9-11bf-4ba8-8fe4-10367acc5a4d from 2025-01-01 to 2025-03-31
+2025-04-05 07:53:40,494 - utils - INFO - DATE_CONVERSION - strftime with format '%Y-%m-%d' at utils.py:93 in safe_strftime:
+  Input: 2025-01-01 00:00:00 (type: datetime)
+  Output: 2025-01-01 (type: str)
+  Input timezone info: None
+2025-04-05 07:53:40,495 - utils - INFO - DATE_CONVERSION - strftime with format '%Y-%m-%d' at utils.py:93 in safe_strftime:
+  Input: 2025-03-31 00:00:00 (type: datetime)
+  Output: 2025-03-31 (type: str)
+  Input timezone info: None
+2025-04-05 07:53:40,495 - hyper-tuner - INFO - DATE_DEBUG - PARSED DATES: start=2025-01-01, end=2025-03-31
+2025-04-05 07:53:40,495 - hyper-tuner - INFO - DATE_DEBUG - CURRENT UTC TIME: 2025-04-05T07:53:40.495768
+2025-04-05 07:53:40,496 - utils - INFO - DATE_CONVERSION - strftime with format '%Y-%m-%d' at utils.py:93 in safe_strftime:
+  Input: 2025-01-01 00:00:00 (type: datetime)
+  Output: 2025-01-01 (type: str)
+  Input timezone info: None
+2025-04-05 07:53:40,496 - hyper-tuner - INFO - DATE_DEBUG - UTC COMPARISON: original_start=2025-01-01, utc_start=2025-01-01
+2025-04-05 07:53:40,497 - utils - INFO - DATE_CONVERSION - strftime with format '%Y-%m-%d' at utils.py:93 in safe_strftime:
+  Input: 2025-03-31 00:00:00 (type: datetime)
+  Output: 2025-03-31 (type: str)
+  Input timezone info: None
+2025-04-05 07:53:40,497 - hyper-tuner - INFO - DATE_DEBUG - UTC COMPARISON: original_end=2025-03-31, utc_end=2025-03-31
+2025-04-05 07:53:40,497 - data_provider_factory - INFO - get_provider called with force_provider: 'None', user_id: 'None' (type: NoneType)
+2025-04-05 07:53:40,497 - hyper-tuner - INFO - Running backtest with provider: kite, user: sushant
+2025-04-05 07:53:40,497 - hyper-tuner - INFO - Data provider class: KiteIntegration
+2025-04-05 07:53:40,497 - hyper-tuner - INFO - Data provider type: KiteIntegration
+2025-04-05 07:53:40,497 - backtest_engine - INFO - BacktestEngine initialized
+2025-04-05 07:53:40,501 - utils - INFO - DATE_CONVERSION - Passing dates to backtest engine at app.py:1148 in run_backtest:
+  Input: ['2025-01-01', '2025-03-31'] (type: list)
+  Output: ['2025-01-01', '2025-03-31'] (type: list)
+  Context: {'strategy_id': '2c2564b9-11bf-4ba8-8fe4-10367acc5a4d', 'provider': 'kite', 'parsed_start': '2025-01-01T00:00:00', 'parsed_end': '2025-03-31T00:00:00'}
+2025-04-05 07:53:40,501 - backtest_engine - INFO - BACKTEST ENGINE START: Backtesting period from 2025-01-01 to 2025-03-31
+2025-04-05 07:53:40,501 - backtest_engine - INFO - BACKTEST ENGINE START: Using initial_capital=1500000 (type: int)
+2025-04-05 07:53:40,501 - backtest_engine - INFO - Getting historical data for ZOMATO from 2025-01-01 to 2025-03-31 with timeframe 15minute
+2025-04-05 07:53:40,503 - utils - INFO - DATE_CONVERSION - Processing dates for Kite API at kite_integration.py:128 in get_historical_data:
+  Input: ['2025-01-01', '2025-03-31'] (type: list)
+  Output: ['2025-01-01', '2025-03-31'] (type: list)
+  Context: {'symbol': 'ZOMATO', 'timeframe': '15minute', 'kite_interval': '15minute'}
+2025-04-05 07:53:40,504 - utils - INFO - DATE_CONVERSION - strptime with format '%Y-%m-%d' at utils.py:68 in safe_strptime:
+  Input: 2025-01-01 (type: str)
+  Output: 2025-01-01 00:00:00 (type: datetime)
+  Context: {'context': 'kite_historical_data_start_date'}
+  Output timezone info: None
+2025-04-05 07:53:40,505 - utils - INFO - DATE_CONVERSION - strptime with format '%Y-%m-%d' at utils.py:68 in safe_strptime:
+  Input: 2025-03-31 (type: str)
+  Output: 2025-03-31 00:00:00 (type: datetime)
+  Context: {'context': 'kite_historical_data_end_date'}
+  Output timezone info: None
+2025-04-05 07:53:40,505 - utils - INFO - DATE_CONVERSION - strftime with format '%Y-%m-%d' at utils.py:93 in safe_strftime:
+  Input: 2025-01-01 00:00:00 (type: datetime)
+  Output: 2025-01-01 (type: str)
+  Input timezone info: None
+2025-04-05 07:53:40,506 - utils - INFO - DATE_CONVERSION - strftime with format '%Y-%m-%d' at utils.py:93 in safe_strftime:
+  Input: 2025-03-31 00:00:00 (type: datetime)
+  Output: 2025-03-31 (type: str)
+  Input timezone info: None
+2025-04-05 07:53:40,506 - kite_integration - INFO - KITE DATE FIX: Original dates - start: 2025-01-01, end: 2025-03-31
+2025-04-05 07:53:40,507 - utils - INFO - DATE_CONVERSION - Date adjustment (+1 day) for Kite API at kite_integration.py:165 in get_historical_data:
+  Input: {'start_date_obj': '2025-01-01T00:00:00', 'end_date_obj': '2025-03-31T00:00:00'} (type: dict)
+  Output: {'adjusted_start_date_obj': '2025-01-02T00:00:00', 'adjusted_end_date_obj': '2025-04-01T00:00:00'} (type: dict)
+  Context: {'reason': 'Compensating for date mismatch issue in Kite API', 'symbol': 'ZOMATO', 'timeframe': '15minute'}
+2025-04-05 07:53:40,508 - utils - INFO - DATE_CONVERSION - strftime with format '%Y-%m-%d' at utils.py:93 in safe_strftime:
+  Input: 2025-01-02 00:00:00 (type: datetime)
+  Output: 2025-01-02 (type: str)
+  Input timezone info: None
+2025-04-05 07:53:40,509 - utils - INFO - DATE_CONVERSION - strftime with format '%Y-%m-%d' at utils.py:93 in safe_strftime:
+  Input: 2025-04-01 00:00:00 (type: datetime)
+  Output: 2025-04-01 (type: str)
+  Input timezone info: None
+2025-04-05 07:53:40,509 - kite_integration - INFO - KITE DATE FIX: Adjusted dates (added 1 day) - start: 2025-01-02, end: 2025-04-01
+2025-04-05 07:53:40,510 - utils - INFO - DATE_CONVERSION - strftime with format '%Y-%m-%d' at utils.py:93 in safe_strftime:
+  Input: 2025-01-02 00:00:00 (type: datetime)
+  Output: 2025-01-02 (type: str)
+  Input timezone info: None
+2025-04-05 07:53:40,510 - utils - INFO - DATE_CONVERSION - strftime with format '%Y-%m-%d' at utils.py:93 in safe_strftime:
+  Input: 2025-04-01 00:00:00 (type: datetime)
+  Output: 2025-04-01 (type: str)
+  Input timezone info: None
+2025-04-05 07:53:40,511 - utils - INFO - DATE_CONVERSION - strftime with format '%Y-%m-%d' at utils.py:93 in safe_strftime:
+  Input: 2025-01-02 00:00:00 (type: datetime)
+  Output: 2025-01-02 (type: str)
+  Input timezone info: None
+2025-04-05 07:53:40,512 - utils - INFO - DATE_CONVERSION - strftime with format '%Y-%m-%d' at utils.py:93 in safe_strftime:
+  Input: 2025-04-01 00:00:00 (type: datetime)
+  Output: 2025-04-01 (type: str)
+  Input timezone info: None
+2025-04-05 07:53:40,513 - utils - INFO - DATE_CONVERSION - Adding time components for Kite API at kite_integration.py:187 in get_historical_data:
+  Input: ['2025-01-02', '2025-04-01'] (type: list)
+  Output: ['2025-01-02 09:15:00', '2025-04-01 15:15:00'] (type: list)
+  Context: {'symbol': 'ZOMATO', 'market_open': '09:15:00', 'market_close': '15:15:00'}
+2025-04-05 07:53:40,513 - kite_integration - INFO - KITE DATE FORMAT: Converting dates from 2025-01-01/2025-03-31 to 2025-01-02 09:15:00/2025-04-01 15:15:00
+2025-04-05 07:53:43,227 - kite_integration - INFO - KITE DATE FIX CHUNK: Original: 2025-01-02 to 2025-03-03, Adjusted: 2025-01-03 to 2025-03-04
+2025-04-05 07:53:43,227 - kite_integration - INFO - KITE API REQUEST: Requesting data for ZOMATO from 2025-01-03 09:15:00 to 2025-03-04 15:15:00
+2025-04-05 07:53:43,323 - kite_integration - INFO - KITE DATE FIX CHUNK: Original: 2025-03-04 to 2025-04-01, Adjusted: 2025-03-05 to 2025-04-02
+2025-04-05 07:53:43,323 - kite_integration - INFO - KITE API REQUEST: Requesting data for ZOMATO from 2025-03-05 09:15:00 to 2025-04-02 15:15:00
+2025-04-05 07:53:43,410 - kite_integration - INFO - KITE API DEBUG: Raw API responses saved to /workspace/backend/debug/kite_raw_response_ZOMATO_2025-01-01_to_2025-03-31.json
+2025-04-05 07:53:43,422 - kite_integration - INFO - KITE DATA RANGE: Originally requested period from 2025-01-01 to 2025-03-31
+2025-04-05 07:53:43,422 - kite_integration - INFO - KITE DATA RANGE: After +1 day adjustment, requested 2025-01-02 to 2025-04-01
+2025-04-05 07:53:43,423 - kite_integration - INFO - KITE DATA RANGE: With time components, requested 2025-01-02 09:15:00 to 2025-04-01 15:15:00
+2025-04-05 07:53:43,423 - kite_integration - INFO - KITE DATA RANGE: Actual data received from 2025-01-03 09:15:00 to 2025-04-02 15:15:00
+2025-04-05 07:53:43,423 - kite_integration - INFO - KITE DATA STATS: Received 1550 data points for ZOMATO with 15minute timeframe
+2025-04-05 07:53:43,456 - backtest_engine - INFO - DATA RANGE: Retrieved 1550 data points from 2025-01-03 to 2025-04-02
+2025-04-05 07:53:43,457 - backtest_engine - INFO - Successfully retrieved data for ZOMATO with 1550 data points
+2025-04-05 07:53:43,457 - backtest_engine - INFO - Adding 1 indicators to data
+2025-04-05 07:53:43,464 - backtest_engine - INFO - All columns available for backtesting: ['open', 'high', 'low', 'close', 'volume', 'sma']
+2025-04-05 07:53:43,464 - backtest_engine - INFO - Required indicator variables: ['sma']
+2025-04-05 07:53:43,464 - backtest_engine - INFO - All validations passed, proceeding with creating strategy
+2025-04-05 07:53:43,464 - backtest_engine - INFO - Successfully added indicators to data. Shape: (1550, 6)
+2025-04-05 07:53:43,466 - backtest_engine - WARNING - Dropped 19 rows with NaN values
+2025-04-05 07:53:43,488 - backtest_engine - INFO - Identified 1 indicator columns to add to data feed
+2025-04-05 07:53:43,488 - backtest_engine - INFO - Created CustomPandasData with 1 additional lines
+2025-04-05 07:53:43,489 - backtest_engine - INFO - BACKTEST ENGINE CEREBRO: Set initial_capital=1500000, Cerebro cash=1500000
+2025-04-05 07:53:43,489 - backtest_engine - INFO - Running backtest for strategy test...
+2025-04-05 07:53:44,429 - backtest_engine - INFO - BACKTEST ENGINE END: Completed backtest from 2025-01-01 to 2025-03-31
+2025-04-05 07:53:44,429 - backtest_engine - INFO - BACKTEST ENGINE END: Backtest completed with initial_capital=1500000, final_value=1500009.5999999999, returns=0.00%
+2025-04-05 07:53:44,429 - backtest_engine - INFO - BACKTEST DATA SUMMARY: Data used for backtest spans from 2025-01-03 to 2025-04-02
+2025-04-05 07:53:44,430 - backtest_engine - INFO - BACKTEST DATA SUMMARY: Contains 1550 data points for symbol ZOMATO
+2025-04-05 07:53:44,430 - backtest_engine - INFO - Processing 8 trade records
+2025-04-05 07:53:44,431 - utils - INFO - DATE_CONVERSION - string datetime passthrough at backtest_engine.py:452 in _format_datetime:
+  Input: 2025-03-11 08:00:00 (type: str)
+  Output: 2025-03-11 08:00:00 (type: str)
+  Context: {'context': 'backtest_engine_format_datetime'}
+2025-04-05 07:53:44,431 - utils - INFO - DATE_CONVERSION - string datetime passthrough at backtest_engine.py:452 in _format_datetime:
+  Input: 2025-03-12 07:15:00 (type: str)
+  Output: 2025-03-12 07:15:00 (type: str)
+  Context: {'context': 'backtest_engine_format_datetime'}
+2025-04-05 07:53:44,432 - utils - INFO - DATE_CONVERSION - string datetime passthrough at backtest_engine.py:452 in _format_datetime:
+  Input: 2025-03-12 08:30:00 (type: str)
+  Output: 2025-03-12 08:30:00 (type: str)
+  Context: {'context': 'backtest_engine_format_datetime'}
+2025-04-05 07:53:44,433 - utils - INFO - DATE_CONVERSION - string datetime passthrough at backtest_engine.py:452 in _format_datetime:
+  Input: 2025-03-13 07:45:00 (type: str)
+  Output: 2025-03-13 07:45:00 (type: str)
+  Context: {'context': 'backtest_engine_format_datetime'}
+2025-04-05 07:53:44,434 - utils - INFO - DATE_CONVERSION - string datetime passthrough at backtest_engine.py:452 in _format_datetime:
+  Input: 2025-03-13 08:45:00 (type: str)
+  Output: 2025-03-13 08:45:00 (type: str)
+  Context: {'context': 'backtest_engine_format_datetime'}
+2025-04-05 07:53:44,435 - utils - INFO - DATE_CONVERSION - string datetime passthrough at backtest_engine.py:452 in _format_datetime:
+  Input: 2025-03-17 08:00:00 (type: str)
+  Output: 2025-03-17 08:00:00 (type: str)
+  Context: {'context': 'backtest_engine_format_datetime'}
+2025-04-05 07:53:44,435 - utils - INFO - DATE_CONVERSION - string datetime passthrough at backtest_engine.py:452 in _format_datetime:
+  Input: 2025-03-17 08:15:00 (type: str)
+  Output: 2025-03-17 08:15:00 (type: str)
+  Context: {'context': 'backtest_engine_format_datetime'}
+2025-04-05 07:53:44,436 - utils - INFO - DATE_CONVERSION - string datetime passthrough at backtest_engine.py:452 in _format_datetime:
+  Input: 2025-03-18 07:30:00 (type: str)
+  Output: 2025-03-18 07:30:00 (type: str)
+  Context: {'context': 'backtest_engine_format_datetime'}
+2025-04-05 07:53:44,437 - utils - INFO - DATE_CONVERSION - string datetime passthrough at backtest_engine.py:452 in _format_datetime:
+  Input: 2025-03-26 08:30:00 (type: str)
+  Output: 2025-03-26 08:30:00 (type: str)
+  Context: {'context': 'backtest_engine_format_datetime'}
+2025-04-05 07:53:44,437 - utils - INFO - DATE_CONVERSION - string datetime passthrough at backtest_engine.py:452 in _format_datetime:
+  Input: 2025-03-27 07:45:00 (type: str)
+  Output: 2025-03-27 07:45:00 (type: str)
+  Context: {'context': 'backtest_engine_format_datetime'}
+2025-04-05 07:53:44,438 - utils - INFO - DATE_CONVERSION - string datetime passthrough at backtest_engine.py:452 in _format_datetime:
+  Input: 2025-03-27 08:00:00 (type: str)
+  Output: 2025-03-27 08:00:00 (type: str)
+  Context: {'context': 'backtest_engine_format_datetime'}
+2025-04-05 07:53:44,439 - utils - INFO - DATE_CONVERSION - string datetime passthrough at backtest_engine.py:452 in _format_datetime:
+  Input: 2025-03-28 07:15:00 (type: str)
+  Output: 2025-03-28 07:15:00 (type: str)
+  Context: {'context': 'backtest_engine_format_datetime'}
+2025-04-05 07:53:44,439 - utils - INFO - DATE_CONVERSION - string datetime passthrough at backtest_engine.py:452 in _format_datetime:
+  Input: 2025-03-28 09:30:00 (type: str)
+  Output: 2025-03-28 09:30:00 (type: str)
+  Context: {'context': 'backtest_engine_format_datetime'}
+2025-04-05 07:53:44,440 - utils - INFO - DATE_CONVERSION - string datetime passthrough at backtest_engine.py:452 in _format_datetime:
+  Input: 2025-04-01 08:45:00 (type: str)
+  Output: 2025-04-01 08:45:00 (type: str)
+  Context: {'context': 'backtest_engine_format_datetime'}
+2025-04-05 07:53:44,440 - utils - INFO - DATE_CONVERSION - string datetime passthrough at backtest_engine.py:452 in _format_datetime:
+  Input: 2025-04-01 09:00:00 (type: str)
+  Output: 2025-04-01 09:00:00 (type: str)
+  Context: {'context': 'backtest_engine_format_datetime'}
+2025-04-05 07:53:44,441 - utils - INFO - DATE_CONVERSION - string datetime passthrough at backtest_engine.py:452 in _format_datetime:
+  Input: 2025-04-02 08:15:00 (type: str)
+  Output: 2025-04-02 08:15:00 (type: str)
+  Context: {'context': 'backtest_engine_format_datetime'}
+2025-04-05 07:53:44,441 - backtest_engine - INFO - Backtest completed: Returns: 0.00%, Win Rate: 0.50, Sharpe: 0.28
+2025-04-05 07:53:44,441 - backtest_engine - INFO - Saving strategy comparison...
+2025-04-05 07:53:44,468 - backtest_engine - INFO - Saved strategy comparison to /workspace/backend/debug/strategy-comparison.md
+2025-04-05 07:53:44,468 - backtest_engine - INFO - Strategy comparison saved to /workspace/backend/debug/strategy-comparison.md
+2025-04-05 07:53:44,517 - hyper-tuner - INFO - DATE_DEBUG - BACKTEST DATES COMPARISON:
+2025-04-05 07:53:44,517 - hyper-tuner - INFO -   - Frontend requested: start_date=2025-01-01, end_date=2025-03-31
+2025-04-05 07:53:44,517 - hyper-tuner - INFO -   - Backtest executed with: start_date=2025-01-01, end_date=2025-03-31
+2025-04-05 07:53:44,518 - hyper-tuner - INFO - DATE_DEBUG - Post-backtest debug file saved to /workspace/backend/debug/backtest_results_debug_20250405_075344.json
+2025-04-05 07:53:44,518 - hyper-tuner - INFO - Backtest completed successfully for strategy 2c2564b9-11bf-4ba8-8fe4-10367acc5a4d using kite provider
+2025-04-05 07:53:57,780 - hyper-tuner - INFO - Successfully generated backtest report for strategy 2c2564b9-11bf-4ba8-8fe4-10367acc5a4d, backtest 3015ce30-cec8-4841-8406-681618393748
