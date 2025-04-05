@@ -17,6 +17,7 @@ from indicators import Indicators
 from data_provider import DataProvider
 from utils import safe_strftime, format_date_for_api, log_date_conversion
 from logging_config import get_logger
+from market_calendar import is_market_hours, next_valid_market_time, format_market_time, parse_market_time
 
 class BacktestEngine:
     """Class to handle backtesting of trading strategies"""
@@ -356,6 +357,31 @@ class BacktestEngine:
                 returns_series = getattr(strat, 'returns', [])
                 sharpe_ratio = getattr(strat, 'sharpe_ratio', 0)
                 
+                # Add market hours information to trades for reporting
+                for trade in trades:
+                    try:
+                        # Try to parse and validate entry date
+                        if trade.get('entry_date'):
+                            try:
+                                entry_dt = parse_market_time(trade['entry_date'])
+                                trade['entry_in_market_hours'] = is_market_hours(entry_dt)
+                            except:
+                                trade['entry_in_market_hours'] = False
+                        
+                        # Try to parse and validate exit date
+                        if trade.get('exit_date'):
+                            try:
+                                exit_dt = parse_market_time(trade['exit_date'])
+                                trade['exit_in_market_hours'] = is_market_hours(exit_dt)
+                            except:
+                                trade['exit_in_market_hours'] = False
+                    except Exception as e:
+                        self.logger.warning(f"Error validating trade timestamps: {str(e)}")
+                
+                # Count invalid timestamps in position tracking
+                position_events_outside_hours = sum(1 for p in getattr(strat, 'position_tracking', []) if p.get('is_market_hours') is False)
+                condition_evals_outside_hours = sum(1 for c in getattr(strat, 'condition_evaluations', []) if c.get('is_market_hours') is False)
+                
                 # Prepare results
                 backtest_results = {
                 'backtest_id': str(uuid.uuid4()),
@@ -376,6 +402,12 @@ class BacktestEngine:
                 'returns_series': self._safe_to_list(returns_series),
                 'condition_evaluations': getattr(strat, 'condition_evaluations', []),
                 'position_tracking': getattr(strat, 'position_tracking', []),
+                'market_hours_validation': {
+                    'enabled': True,
+                    'market_hours': '9:15 AM - 3:15 PM IST (Monday-Friday)',
+                    'position_events_outside_hours': position_events_outside_hours,
+                    'condition_evaluations_outside_hours': condition_evals_outside_hours,
+                },
                 'summary': {
                     'returns': returns,
                     'win_rate': win_rate,
@@ -437,6 +469,7 @@ class BacktestEngine:
         """
         Format a datetime value to string, handling various input types
         Preserves timezone information when available
+        Ensures timestamps conform to market hours
         
         Args:
             dt_value: Can be datetime object, string, or None
@@ -448,44 +481,24 @@ class BacktestEngine:
             return None
             
         try:
-            # If it's already a string, check if it has timezone info
+            # If it's already a string, use our market_calendar parse function
             if isinstance(dt_value, str):
-                # Check if the string already contains timezone information
-                has_tz_info = '+05:30' in dt_value or ' IST' in dt_value
-                if not has_tz_info and ' ' in dt_value and len(dt_value) >= 16:
-                    # If it looks like a datetime string but doesn't have timezone, add IST indicator
-                    dt_value = dt_value + ' IST'
-                return log_date_conversion(
-                    dt_value,
-                    dt_value,
-                    "string datetime passthrough with timezone check",
-                    extra_info={"context": "backtest_engine_format_datetime", "has_tz_info": has_tz_info}
-                )
+                try:
+                    # Parse the string into a datetime object
+                    parsed_dt = parse_market_time(dt_value)
+                    # Format using our market_calendar utility
+                    return format_market_time(parsed_dt)
+                except Exception as e:
+                    self.logger.warning(f"Error parsing datetime string {dt_value}: {str(e)}")
+                    # Return original string with IST if it doesn't have timezone
+                    has_tz_info = '+05:30' in dt_value or ' IST' in dt_value
+                    if not has_tz_info and ' ' in dt_value and len(dt_value) >= 16:
+                        return dt_value + ' IST'
+                    return dt_value
                 
-            # If it's a datetime object, format it using our utility and preserve timezone
+            # If it's a datetime object, format it using our market_calendar utility
             if isinstance(dt_value, datetime):
-                # Check if the datetime object has timezone information
-                has_tz = dt_value.tzinfo is not None
-                self.logger.debug(f"Formatting datetime with timezone: {dt_value}, Has TZ: {has_tz}")
-                
-                if has_tz:
-                    # Use a format that includes timezone information
-                    result = safe_strftime(
-                        dt_value, 
-                        '%Y-%m-%d %H:%M:%S %Z',  # Include timezone
-                        extra_info={"context": "backtest_engine_format_datetime_with_tz"}
-                    )
-                else:
-                    # For naive datetime objects, format as before but append IST indicator
-                    base_result = safe_strftime(
-                        dt_value, 
-                        '%Y-%m-%d %H:%M:%S',
-                        extra_info={"context": "backtest_engine_format_datetime"}
-                    )
-                    # Append IST timezone indicator for naive datetimes
-                    result = base_result + ' IST'
-                    
-                return result
+                return format_market_time(dt_value)
                 
             # Try to convert other types to string with logging
             result = str(dt_value)
@@ -681,31 +694,25 @@ class BacktestEngine:
                 
             
             def _format_date(self, dt_value):
-                """Format a datetime value to string, preserving timezone"""
+                """Format a datetime value to string, preserving timezone and validating market hours"""
                 if dt_value is None:
                     return None
                     
                 try:
+                    # Leverage our market_calendar utility for consistent formatting
                     if isinstance(dt_value, datetime):
-                        # Check if the datetime object has timezone information
-                        has_tz = dt_value.tzinfo is not None
-                        
-                        if has_tz:
-                            # Use a format that includes timezone information
-                            return dt_value.strftime('%Y-%m-%d %H:%M:%S %Z')
-                        else:
-                            # For naive datetime objects, format and append IST indicator
-                            base_result = dt_value.strftime('%Y-%m-%d %H:%M:%S')
-                            # Append IST timezone indicator for naive datetimes
-                            return base_result + ' IST'
+                        return format_market_time(dt_value)
                     
-                    # If not a datetime object, convert to string
+                    # If not a datetime object, convert to string and try to parse
                     result = str(dt_value)
-                    # Check if it looks like a datetime string but doesn't have timezone
-                    if ' ' in result and len(result) >= 16 and not ('+05:30' in result or ' IST' in result):
-                        # Append timezone for consistency
-                        result = result + ' IST'
-                    return result
+                    try:
+                        parsed_dt = parse_market_time(result)
+                        return format_market_time(parsed_dt)
+                    except:
+                        # If parsing fails, just ensure it has IST timezone
+                        if ' ' in result and len(result) >= 16 and not ('+05:30' in result or ' IST' in result):
+                            result = result + ' IST'
+                        return result
                 except Exception as e:
                     self.log(f"Error formatting datetime: {str(e)}")
                     return str(dt_value) if dt_value is not None else None
@@ -716,7 +723,7 @@ class BacktestEngine:
                 print(f"{dt.isoformat()}: {txt}")
             
             def notify_order(self, order):
-                """Handle order notifications"""
+                """Handle order notifications, ensuring trades have valid market hour timestamps"""
                 if order.status in [order.Submitted, order.Accepted]:
                     # Order has been submitted/accepted - nothing to do
                     return
@@ -728,9 +735,20 @@ class BacktestEngine:
                         self.buyprice = order.executed.price
                         self.buycomm = order.executed.comm
                         
+                        # Get raw timestamp and validate against market hours
+                        timestamp_raw = self.datas[0].datetime.datetime(0)
+                        
+                        # If outside market hours, adjust to next valid market time
+                        if not is_market_hours(timestamp_raw):
+                            original_timestamp = timestamp_raw
+                            timestamp_raw = next_valid_market_time(timestamp_raw)
+                            self.log(f"Adjusted entry timestamp from {format_market_time(original_timestamp)} to {format_market_time(timestamp_raw)} (market hours validation)")
+                        
+                        timestamp_str = self._format_date(timestamp_raw)
+                        
                         # Create a new trade record
                         self.current_trade = {
-                            'entry_date': self._format_date(self.datas[0].datetime.datetime(0)),
+                            'entry_date': timestamp_str,
                             'entry_price': order.executed.price,
                             'exit_date': None,
                             'exit_price': None,
@@ -742,24 +760,35 @@ class BacktestEngine:
                         # Store the current bar index for position tracking
                         self.position_entry_bar = len(self.datas[0])
                         
-                        # Track position entry
-                        timestamp_raw = self.datas[0].datetime.datetime(0)
-                        timestamp_str = self._format_date(timestamp_raw)
+                        # Track position entry with validated timestamp
                         self.position_tracking.append({
                             'action': 'ENTRY',
                             'timestamp': timestamp_str,
+                            'original_timestamp': self._format_date(self.datas[0].datetime.datetime(0)),
                             'price': order.executed.price,
                             'size': order.executed.size,
                             'bar_index': len(self.datas[0]),
                             'reason': 'Entry conditions met',
-                            'portfolio_value': self.broker.getvalue()
+                            'portfolio_value': self.broker.getvalue(),
+                            'is_market_hours': is_market_hours(timestamp_raw)
                         })
                     
                     elif order.issell():
                         self.log(f"SELL EXECUTED, Price: {order.executed.price:.2f}, Cost: {order.executed.value:.2f}, Comm: {order.executed.comm:.2f}")
                         
+                        # Get raw timestamp and validate against market hours
+                        timestamp_raw = self.datas[0].datetime.datetime(0)
+                        
+                        # If outside market hours, adjust to next valid market time
+                        if not is_market_hours(timestamp_raw):
+                            original_timestamp = timestamp_raw
+                            timestamp_raw = next_valid_market_time(timestamp_raw)
+                            self.log(f"Adjusted exit timestamp from {format_market_time(original_timestamp)} to {format_market_time(timestamp_raw)} (market hours validation)")
+                        
+                        timestamp_str = self._format_date(timestamp_raw)
+                        
                         # Update the current trade record
-                        self.current_trade['exit_date'] = self._format_date(self.datas[0].datetime.datetime(0))
+                        self.current_trade['exit_date'] = timestamp_str
                         self.current_trade['exit_price'] = order.executed.price
                         
                         # Calculate profit in points and percent
@@ -788,18 +817,18 @@ class BacktestEngine:
                             elif self.stop_loss > 0 and loss_pct >= self.stop_loss:
                                 exit_reason = f'Stop loss triggered ({loss_pct:.2f}%)'
                         
-                        # Track position exit
-                        timestamp_raw = self.datas[0].datetime.datetime(0)
-                        timestamp_str = self._format_date(timestamp_raw)
+                        # Track position exit with validated timestamp
                         self.position_tracking.append({
                             'action': 'EXIT',
                             'timestamp': timestamp_str,
+                            'original_timestamp': self._format_date(self.datas[0].datetime.datetime(0)),
                             'price': order.executed.price,
                             'size': order.executed.size,
                             'bar_index': len(self.datas[0]),
                             'reason': exit_reason,
                             'portfolio_value': self.broker.getvalue(),
-                            'profit_pct': self.current_trade['profit_pct']
+                            'profit_pct': self.current_trade['profit_pct'],
+                            'is_market_hours': is_market_hours(timestamp_raw)
                         })
                         
                         # Add the completed trade to the trades list
@@ -930,12 +959,25 @@ class BacktestEngine:
                 if current_bar < 30:  # Arbitrary threshold to ensure indicators have enough data
                     return False
                 
-                # Add tracking for this evaluation
+                # Get raw timestamp and check market hours
                 timestamp_raw = self.datas[0].datetime.datetime(0)
-                timestamp_str = self._format_date(timestamp_raw)
+                is_within_market = is_market_hours(timestamp_raw)
+                
+                # If outside market hours, record the original but use next valid time for display
+                if not is_within_market:
+                    original_timestamp = timestamp_raw
+                    adjusted_timestamp = next_valid_market_time(timestamp_raw)
+                    timestamp_str = self._format_date(adjusted_timestamp)
+                    self.log(f"Condition evaluated outside market hours: {format_market_time(original_timestamp)} → {format_market_time(adjusted_timestamp)}")
+                else:
+                    timestamp_str = self._format_date(timestamp_raw)
+                
+                # Add tracking for this evaluation
                 bar_tracking = {
                     'timestamp': timestamp_str,
+                    'original_timestamp': self._format_date(timestamp_raw),
                     'bar_number': current_bar,
+                    'is_market_hours': is_within_market,
                     'conditions': []
                 }
                 
@@ -1060,12 +1102,26 @@ class BacktestEngine:
                 else:
                     self.log(f"Position tracking: Entry bar not set, using default 0 bars in position")
                 
-                # Add tracking for this evaluation
+                # Get raw timestamp and check market hours
                 timestamp_raw = self.datas[0].datetime.datetime(0)
-                timestamp_str = self._format_date(timestamp_raw)
+                is_within_market = is_market_hours(timestamp_raw)
+                
+                # If outside market hours, record the original but use next valid time for display
+                if not is_within_market:
+                    original_timestamp = timestamp_raw
+                    adjusted_timestamp = next_valid_market_time(timestamp_raw)
+                    timestamp_str = self._format_date(adjusted_timestamp)
+                    self.log(f"Exit condition evaluated outside market hours: {format_market_time(original_timestamp)} → {format_market_time(adjusted_timestamp)}")
+                else:
+                    timestamp_str = self._format_date(timestamp_raw)
+                
+                # Add tracking for this evaluation
                 bar_tracking = {
                     'timestamp': timestamp_str,
+                    'original_timestamp': self._format_date(timestamp_raw),
                     'bar_number': current_bar,
+                    'bars_in_position': bars_in_position,
+                    'is_market_hours': is_within_market,
                     'conditions': []
                 }
                 
