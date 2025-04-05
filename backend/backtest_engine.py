@@ -589,20 +589,6 @@ class BacktestEngine:
                 self.stop_loss = stop_loss
                 self.target_profit = target_profit
                 
-                # Helper method for datetime formatting
-                def _format_date(self, dt_value):
-                    """Format a datetime value to string"""
-                    if dt_value is None:
-                        return None
-                        
-                    try:
-                        if isinstance(dt_value, datetime):
-                            return dt_value.strftime('%Y-%m-%d %H:%M:%S')
-                        return str(dt_value)
-                    except Exception as e:
-                        self.log(f"Error formatting datetime: {str(e)}")
-                        return str(dt_value) if dt_value is not None else None
-                
                 # Log available data feed lines for debugging
                 self.log("Available data feed lines:")
                 for i, data in enumerate(self.datas):
@@ -665,6 +651,19 @@ class BacktestEngine:
                     
                 self.log("Strategy ready")
                 
+            
+            def _format_date(self, dt_value):
+                """Format a datetime value to string"""
+                if dt_value is None:
+                    return None
+                    
+                try:
+                    if isinstance(dt_value, datetime):
+                        return dt_value.strftime('%Y-%m-%d %H:%M:%S')
+                    return str(dt_value)
+                except Exception as e:
+                    self.log(f"Error formatting datetime: {str(e)}")
+                    return str(dt_value) if dt_value is not None else None
             
             def log(self, txt, dt=None):
                 """Logging function"""
