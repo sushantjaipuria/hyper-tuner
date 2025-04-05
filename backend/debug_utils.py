@@ -3,8 +3,6 @@ import uuid
 from datetime import datetime
 import json
 import inspect
-# Import market calendar utilities for timestamp validation in debug info
-from market_calendar import is_market_hours, format_market_time, parse_market_time
 
 def save_strategy_comparison(strategy, bt_strategy_class, backtrader_interpretation, logger, backtest_results=None):
     """
@@ -163,11 +161,6 @@ def save_strategy_debug_info(strategy, bt_strategy_class, logger, backtest_resul
 - Losing Trades: {backtest_results.get('losing_trades', 'N/A')}
 - Max Drawdown: {backtest_results.get('max_drawdown', 'N/A')}%
 - Sharpe Ratio: {backtest_results.get('sharpe_ratio', 'N/A')}
-
-### Market Hours Validation
-- Market Hours: 9:15 AM - 3:15 PM IST (Monday-Friday)
-- Position Events Outside Market Hours: {backtest_results.get('market_hours_validation', {}).get('position_events_outside_hours', 'N/A')}
-- Condition Evaluations Outside Market Hours: {backtest_results.get('market_hours_validation', {}).get('condition_evaluations_outside_hours', 'N/A')}
 
 ### Trades List
 ```json
