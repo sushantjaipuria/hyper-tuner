@@ -1811,6 +1811,74 @@ def generate_backtest_report(backtest_id):
             "error": f"Error generating report: {str(e)}"
         }), 500
 
+@app.route('/api/backtest-indicators/<backtest_id>', methods=['GET'])
+def get_backtest_indicators(backtest_id):
+    """Generate and download CSV file with backtest indicator data"""
+    try:
+        # Get the strategy_id from query parameters
+        strategy_id = request.args.get('strategy_id')
+        if not strategy_id:
+            logger.error("Missing strategy_id parameter for backtest indicators")
+            return jsonify({
+                "success": False, 
+                "error": "Missing strategy_id parameter. Please ensure you provide a valid strategy ID."
+            }), 400
+            
+        # Get the strategy and backtest results
+        try:
+            strategy = strategy_manager.get_strategy(strategy_id)
+            backtest_results = strategy_manager.get_backtest_results(strategy_id, backtest_id)
+        except Exception as e:
+            logger.error(f"Error retrieving backtest or strategy data: {str(e)}")
+            return jsonify({
+                "success": False, 
+                "error": f"Could not retrieve data: {str(e)}"
+            }), 404
+            
+        # Get the current data provider
+        current_data_provider = provider_factory.get_provider()
+        logger.info(f"Getting indicator data for backtest {backtest_id} with provider {provider_factory.get_provider_name()}")
+        
+        # Get time period and symbol from the strategy and backtest
+        symbol = strategy.get('symbol')
+        timeframe = strategy.get('timeframe')
+        start_date = backtest_results.get('start_date')
+        end_date = backtest_results.get('end_date')
+        
+        # Get historical data
+        logger.info(f"Fetching historical data for {symbol} from {start_date} to {end_date}")
+        data = current_data_provider.get_historical_data(symbol, timeframe, start_date, end_date)
+        
+        # Extract indicator configs from strategy
+        indicator_configs = []
+        for condition in strategy.get('entry_conditions', []) + strategy.get('exit_conditions', []):
+            if 'indicator' in condition:
+                indicator_configs.append(condition)
+        
+        # Create indicators instance
+        indicators_obj = Indicators()
+        
+        # Add indicators to the data
+        logger.info(f"Adding {len(indicator_configs)} indicators to data")
+        data_with_indicators = indicators_obj.add_all_indicators(data, indicator_configs)
+        
+        # Prepare CSV response
+        csv_data = io.StringIO()
+        data_with_indicators.to_csv(csv_data, index=True)
+        
+        # Create response
+        response = Response(csv_data.getvalue(), mimetype='text/csv')
+        response.headers['Content-Disposition'] = f'attachment; filename=backtest_indicators_{backtest_id}.csv'
+        
+        logger.info(f"Successfully generated indicators CSV for backtest {backtest_id}")
+        return response
+    except Exception as e:
+        logger.error(f"Error generating indicators CSV: {str(e)}")
+        return jsonify({
+            "success": False, 
+            "error": f"Error generating indicators data: {str(e)}"
+        }), 500
+
 @app.route('/api/debug/optimization-results/<optimization_id>', methods=['GET'])
 def debug_optimization_results(optimization_id):
     """Debug endpoint to check raw optimization results"""
